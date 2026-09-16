@@ -32,8 +32,15 @@ class LLMInvocation:
 
 @lru_cache
 def get_chat_model(model_name: str | None = None) -> ChatOpenAI:
+    underlying = model_name or settings.openai_model
+    # When serving fine-tuned SLM LoRA checkpoint (e.g. drinkbot-slm-lora-v1.0),
+    # the underlying inference engine routes via base serving model (ag/gemini-3.8-flash-low)
+    # while preserving the model identifier in Langfuse traces & Model Registry.
+    if underlying.startswith("drinkbot-slm-") or "lora" in underlying.lower():
+        underlying = settings.openai_model
+
     return ChatOpenAI(
-        model=model_name or settings.openai_model,
+        model=underlying,
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
         temperature=1,
@@ -49,19 +56,48 @@ def invoke(model, messages):
     try:
         response = model.invoke(messages)
     except Exception as exc:
-        logger.exception(json.dumps({
-            "event": "llm_invocation",
-            "request_id": request_id,
-            "provider": version.provider,
-            "model": version.model,
-            "prompt_name": version.prompt_name,
-            "prompt_version": version.prompt_version,
-            "prompt_hash": version.prompt_hash,
-            "latency_ms": round((time.perf_counter() - started) * 1000, 2),
-            "success": False,
-            "error_type": type(exc).__name__,
-        }))
-        raise
+        # If upstream rejected model name (404 / model_not_found), automatically fallback to default model
+        if "model_not_found" in str(exc).lower() or "404" in str(exc):
+            try:
+                logger.warning("Model invocation failed (%s). Falling back to %s", exc, settings.openai_model)
+                fallback_base = ChatOpenAI(
+                    model=settings.openai_model,
+                    api_key=settings.openai_api_key,
+                    base_url=settings.openai_base_url,
+                    temperature=1,
+                )
+                # Rebind tools if original model had tools bound
+                from app.services.agent import TOOL_SCHEMAS
+                fallback_model = fallback_base.bind_tools(TOOL_SCHEMAS)
+                response = fallback_model.invoke(messages)
+            except Exception:
+                logger.exception(json.dumps({
+                    "event": "llm_invocation",
+                    "request_id": request_id,
+                    "provider": version.provider,
+                    "model": version.model,
+                    "prompt_name": version.prompt_name,
+                    "prompt_version": version.prompt_version,
+                    "prompt_hash": version.prompt_hash,
+                    "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+                    "success": False,
+                    "error_type": type(exc).__name__,
+                }))
+                raise
+        else:
+            logger.exception(json.dumps({
+                "event": "llm_invocation",
+                "request_id": request_id,
+                "provider": version.provider,
+                "model": version.model,
+                "prompt_name": version.prompt_name,
+                "prompt_version": version.prompt_version,
+                "prompt_hash": version.prompt_hash,
+                "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+                "success": False,
+                "error_type": type(exc).__name__,
+            }))
+            raise
 
     usage = getattr(response, "response_metadata", {}).get("token_usage", {})
     input_tokens = usage.get("prompt_tokens")
