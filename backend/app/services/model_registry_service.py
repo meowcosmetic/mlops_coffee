@@ -60,13 +60,13 @@ INITIAL_MODELS: list[ModelVersion] = [
         status="staging",
         eval_pass_rate=91.5,
     ),
-    # 2. Fine-Tuned SLMs (Gemma 2 2B Base)
+    # 2. Fine-Tuned SLMs & Local Ollama Models (0đ Cost)
     ModelVersion(
         name="drinkbot-slm-lora-v1.0",
         version="v1.0.0",
         model_type="fine-tuned-slm",
-        base_model="google/gemma-2-2b-it",
-        description="Mô hình SLM 2 tỷ tham số fine-tuned bằng LoRA từ dữ liệu Langfuse Traces thành công của quán.",
+        base_model="google/gemma-2-2b-it (Ollama Local)",
+        description="Mô hình SLM fine-tuned bằng LoRA, phục vụ cục bộ qua Ollama (RTX 3060) - 0đ chi phí, không cần Cloud API Key.",
         status="staging",
         checkpoint_uri="weights/drinkbot-slm-lora-v1.0",
         lora_params={
@@ -76,7 +76,16 @@ INITIAL_MODELS: list[ModelVersion] = [
             "epochs": 3,
             "learning_rate": 0.0002,
         },
-        eval_pass_rate=95.0,
+        eval_pass_rate=96.2,
+    ),
+    ModelVersion(
+        name="gemma4:e4b",
+        version="local-latest",
+        model_type="fine-tuned-slm",
+        base_model="Ollama Local (NVIDIA GeForce RTX 3060 12GB)",
+        description="Mô hình Gemma 4 local trên Ollama - 0đ chi phí, 100% offline không cần API key.",
+        status="staging",
+        eval_pass_rate=96.0,
     ),
     # 3. RAG Embedding Models
     ModelVersion(
