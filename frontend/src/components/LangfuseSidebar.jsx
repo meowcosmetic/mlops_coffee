@@ -59,12 +59,42 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
   const [nerResult, setNerResult] = useState(null)
   const [isParsingNER, setIsParsingNER] = useState(false)
 
+  // Sub-tabs in Tab 4: 'registry' | 'experiments' | 'datasets'
+  const [modelSubTab, setModelSubTab] = useState('registry')
+
+  // Experiment Tracking & Hyperparameters State
+  const [experimentRuns, setExperimentRuns] = useState([])
+  const [loadingRuns, setLoadingRuns] = useState(false)
+  const [selectedRunIds, setSelectedRunIds] = useState([])
+  const [comparisonResult, setComparisonResult] = useState(null)
+  const [loadingComparison, setLoadingComparison] = useState(false)
+
+  // Centralized Training Data State
+  const [datasetsList, setDatasetsList] = useState([])
+  const [loadingDatasets, setLoadingDatasets] = useState(false)
+  const [selectedDatasetName, setSelectedDatasetName] = useState('drinkbot-slm-finetune-dataset')
+  const [selectedDatasetVersion, setSelectedDatasetVersion] = useState('')
+  const [currentDatasetDetail, setCurrentDatasetDetail] = useState(null)
+  const [loadingDatasetDetail, setLoadingDatasetDetail] = useState(false)
+  const [sampleSearchQuery, setSampleSearchQuery] = useState('')
+  const [showAddSampleForm, setShowAddSampleForm] = useState(false)
+  const [showSnapshotForm, setShowSnapshotForm] = useState(false)
+  const [sampleField1, setSampleField1] = useState('')
+  const [sampleField2, setSampleField2] = useState('')
+  const [sampleCategory, setSampleCategory] = useState('coffee')
+  const [sampleLabel, setSampleLabel] = useState(1.0)
+  const [isSubmittingSample, setIsSubmittingSample] = useState(false)
+  const [newVersionTag, setNewVersionTag] = useState('')
+  const [newVersionDesc, setNewVersionDesc] = useState('')
+  const [isSubmittingVersion, setIsSubmittingVersion] = useState(false)
+
   // Add Test Case Modal state
   const [showAddModal, setShowAddModal] = useState(false)
   const [modalCategory, setModalCategory] = useState('menu_groundedness')
   const [modalName, setModalName] = useState('')
   const [modalInput, setModalInput] = useState('')
   const [modalExpectedDesc, setModalExpectedDesc] = useState('')
+
 
   async function fetchTraces() {
     setLoadingTraces(true)
@@ -134,8 +164,133 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
       fetchLatestBenchmark()
       fetchModels()
       fetchModelRegistry()
+      fetchExperimentRuns()
+      fetchDatasetsList()
     }
   }, [isOpen, onRefreshTrigger])
+
+  useEffect(() => {
+    if (selectedDatasetName) {
+      fetchDatasetDetail(selectedDatasetName, selectedDatasetVersion)
+    }
+  }, [selectedDatasetName, selectedDatasetVersion])
+
+  async function fetchExperimentRuns() {
+    setLoadingRuns(true)
+    try {
+      const data = await api.experimentRuns()
+      setExperimentRuns(data.runs || [])
+    } catch (err) {
+      console.error('Failed to load experiment runs:', err)
+    } finally {
+      setLoadingRuns(false)
+    }
+  }
+
+  async function handleCompareRuns() {
+    if (selectedRunIds.length < 2) {
+      alert('Vui lòng chọn ít nhất 2 runs để so sánh!')
+      return
+    }
+    setLoadingComparison(true)
+    try {
+      const data = await api.compareRuns(selectedRunIds)
+      setComparisonResult(data.comparison || [])
+    } catch (err) {
+      alert(`Lỗi so sánh thực nghiệm: ${err.message}`)
+    } finally {
+      setLoadingComparison(false)
+    }
+  }
+
+  async function fetchDatasetsList() {
+    setLoadingDatasets(true)
+    try {
+      const data = await api.trainingDatasets()
+      setDatasetsList(data.datasets || [])
+      if (!selectedDatasetName && data.datasets?.length > 0) {
+        setSelectedDatasetName(data.datasets[0].name)
+      }
+    } catch (err) {
+      console.error('Failed to load training datasets:', err)
+    } finally {
+      setLoadingDatasets(false)
+    }
+  }
+
+  async function fetchDatasetDetail(name, version) {
+    if (!name) return
+    setLoadingDatasetDetail(true)
+    try {
+      const data = await api.datasetDetails(name, version)
+      setCurrentDatasetDetail(data.dataset || null)
+    } catch (err) {
+      console.error('Failed to load dataset details:', err)
+    } finally {
+      setLoadingDatasetDetail(false)
+    }
+  }
+
+  async function handleAddSample() {
+    if (!sampleField1.trim() || !sampleField2.trim()) {
+      alert('Vui lòng nhập đầy đủ các trường dữ liệu!')
+      return
+    }
+    setIsSubmittingSample(true)
+    try {
+      let samplePayload = {}
+      if (selectedDatasetName === 'drinkbot-slm-finetune-dataset') {
+        samplePayload = {
+          user_input: sampleField1.trim(),
+          model_output: sampleField2.trim(),
+          category: sampleCategory,
+          verified: true
+        }
+      } else {
+        samplePayload = {
+          query_slang: sampleField1.trim(),
+          target_drink_flavor: sampleField2.trim(),
+          label: Number(sampleLabel) || 1.0,
+          category: sampleCategory
+        }
+      }
+      await api.addDatasetSample(selectedDatasetName, samplePayload)
+      setSampleField1('')
+      setSampleField2('')
+      setShowAddSampleForm(false)
+      setFeedbackMsg('✓ Đã thêm mẫu vào tập dữ liệu tập trung thành công!')
+      setTimeout(() => setFeedbackMsg(null), 3500)
+      await fetchDatasetsList()
+      await fetchDatasetDetail(selectedDatasetName, selectedDatasetVersion)
+    } catch (err) {
+      alert(`Lỗi thêm mẫu: ${err.message}`)
+    } finally {
+      setIsSubmittingSample(false)
+    }
+  }
+
+  async function handleCreateVersionSnapshot() {
+    if (!newVersionTag.trim()) {
+      alert('Vui lòng nhập định danh version (ví dụ: v1.1.0)!')
+      return
+    }
+    setIsSubmittingVersion(true)
+    try {
+      await api.createDatasetVersion(selectedDatasetName, newVersionTag.trim(), newVersionDesc.trim())
+      setSelectedDatasetVersion(newVersionTag.trim())
+      setNewVersionTag('')
+      setNewVersionDesc('')
+      setShowSnapshotForm(false)
+      setFeedbackMsg(`✓ Đã tạo snapshot phiên bản ${newVersionTag} thành công!`)
+      setTimeout(() => setFeedbackMsg(null), 3500)
+      await fetchDatasetsList()
+      await fetchDatasetDetail(selectedDatasetName, newVersionTag.trim())
+    } catch (err) {
+      alert(`Lỗi tạo snapshot version: ${err.message}`)
+    } finally {
+      setIsSubmittingVersion(false)
+    }
+  }
 
   async function fetchModelRegistry() {
     setLoadingModelsList(true)
@@ -176,7 +331,8 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
       })
       setSlmMetrics(res.metrics)
       await fetchModelRegistry()
-      setFeedbackMsg('✓ Huấn luyện LoRA thành công! Checkpoint drinkbot-slm-lora-v1.0 đã được cập nhật.')
+      await fetchExperimentRuns()
+      setFeedbackMsg('✓ Huấn luyện LoRA thành công! Đã ghi nhận thông số thực nghiệm & Checkpoint.')
       setTimeout(() => setFeedbackMsg(null), 4000)
     } catch (err) {
       alert(`Lỗi huấn luyện SLM: ${err.message}`)
@@ -194,7 +350,8 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
       })
       setEmbedMetrics(res.metrics)
       await fetchModelRegistry()
-      setFeedbackMsg('✓ Tái huấn luyện RAG Embedding thành công! Adapter đã được kích hoạt.')
+      await fetchExperimentRuns()
+      setFeedbackMsg('✓ Tái huấn luyện RAG Embedding thành công! Đã ghi nhận thông số thực nghiệm & Adapter.')
       setTimeout(() => setFeedbackMsg(null), 4000)
     } catch (err) {
       alert(`Lỗi tái huấn luyện Embeddings: ${err.message}`)
@@ -1373,8 +1530,57 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
             </button>
           </div>
 
-          {/* ACTIVE STATUS BANNER */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          {/* SUB-TABS NAVIGATION: 1) Registry & Pipelines | 2) Experiment Runs | 3) Centralized Data Hub */}
+          <div className="flex gap-1.5 p-1 bg-purple-100/70 rounded-xl border border-purple-200 text-xs font-semibold">
+            <button
+              onClick={() => setModelSubTab('registry')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-center transition flex items-center justify-center gap-1 ${
+                modelSubTab === 'registry'
+                  ? 'bg-white text-purple-950 font-bold shadow-xs'
+                  : 'text-purple-800/80 hover:text-purple-950 hover:bg-white/50'
+              }`}
+            >
+              <span>📦</span> Checkpoints & Retrain
+            </button>
+            <button
+              onClick={() => {
+                setModelSubTab('experiments')
+                fetchExperimentRuns()
+              }}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-center transition flex items-center justify-center gap-1 ${
+                modelSubTab === 'experiments'
+                  ? 'bg-white text-purple-950 font-bold shadow-xs'
+                  : 'text-purple-800/80 hover:text-purple-950 hover:bg-white/50'
+              }`}
+            >
+              <span>📊</span> Lịch Sử Thực Nghiệm
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-200 text-purple-900 font-mono">
+                {experimentRuns.length}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setModelSubTab('datasets')
+                fetchDatasetsList()
+              }}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-center transition flex items-center justify-center gap-1 ${
+                modelSubTab === 'datasets'
+                  ? 'bg-white text-purple-950 font-bold shadow-xs'
+                  : 'text-purple-800/80 hover:text-purple-950 hover:bg-white/50'
+              }`}
+            >
+              <span>📚</span> Quản Lý Dữ Liệu
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-200 text-emerald-900 font-mono">
+                {datasetsList.length}
+              </span>
+            </button>
+          </div>
+
+          {/* SUB-TAB 1: CHECKPOINTS & RETRAINING */}
+          {modelSubTab === 'registry' && (
+            <div className="space-y-4">
+              {/* ACTIVE STATUS BANNER */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Active Chat Model</span>
@@ -1658,6 +1864,658 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
           </div>
         </div>
       )}
+
+          {/* SUB-TAB 2: EXPERIMENT RUNS (LƯU THÔNG SỐ MODEL & COMPARISON) */}
+          {modelSubTab === 'experiments' && (
+            <div className="space-y-4">
+              {/* INTRO & ACTIONS */}
+              <div className="p-3 bg-white rounded-xl border border-purple-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                      <span>📊</span> Lịch Sử Thực Nghiệm & Lưu Trữ Hyperparameters
+                    </h4>
+                    <p className="text-[11px] text-gray-600 mt-0.5">
+                      MLOps Level 2: Ghi nhận đầy đủ thông số r, α, LR, Epochs, Loss curve, Phần cứng GPU RTX 3060 vs CPU, và Eval Gate.
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchExperimentRuns}
+                    disabled={loadingRuns}
+                    className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded text-[11px] font-semibold transition"
+                  >
+                    {loadingRuns ? 'Đang tải...' : '↻ Làm mới'}
+                  </button>
+                </div>
+
+                {/* COMPARE ACTION BAR */}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div className="text-[11px] text-gray-500">
+                    Đã chọn <strong className="text-purple-900">{selectedRunIds.length}</strong> runs để so sánh
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedRunIds.length > 0 && (
+                      <button
+                        onClick={() => setSelectedRunIds([])}
+                        className="text-[11px] text-gray-500 hover:text-gray-800 underline"
+                      >
+                        Bỏ chọn
+                      </button>
+                    )}
+                    <button
+                      onClick={handleCompareRuns}
+                      disabled={selectedRunIds.length < 2 || loadingComparison}
+                      className="px-3 py-1 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold transition shadow-xs disabled:opacity-40"
+                    >
+                      {loadingComparison ? 'Đang so sánh...' : `⚡ So sánh ${selectedRunIds.length >= 2 ? selectedRunIds.length : ''} Runs`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SIDE-BY-SIDE COMPARISON MODAL/BOX */}
+              {comparisonResult && (
+                <div className="p-3.5 bg-gradient-to-r from-purple-50 via-white to-amber-50 rounded-xl border-2 border-purple-300 shadow-md space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                      <span>⚖️</span> Bảng So Sánh Thực Nghiệm ({comparisonResult.length} runs)
+                    </h5>
+                    <button
+                      onClick={() => setComparisonResult(null)}
+                      className="text-gray-400 hover:text-gray-700 font-bold text-sm px-1.5"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[11px] border-collapse bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <thead>
+                        <tr className="bg-purple-900 text-white text-left font-semibold">
+                          <th className="p-2 border-b border-purple-800">Thông Số / Metric</th>
+                          {comparisonResult.map((c) => (
+                            <th key={c.run_id} className="p-2 border-b border-purple-800 font-mono">
+                              {c.run_id}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Model Checkpoint</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono font-bold text-purple-950">
+                              {c.model_name}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Pipeline Type</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono text-[10px]">
+                              {c.pipeline_type}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Base Model</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono text-gray-600">
+                              {c.base_model}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">LoRA Rank (r) / Alpha</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono text-amber-900 font-bold">
+                              r={c.hyperparameters?.r ?? 'N/A'}, α={c.hyperparameters?.lora_alpha ?? 'N/A'}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Epochs / Batch Size</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono">
+                              {c.hyperparameters?.epochs ?? 'N/A'} eps / batch {c.hyperparameters?.batch_size ?? 'N/A'}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Phần cứng (Hardware)</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono text-[10px] text-emerald-800">
+                              {c.hardware?.device_name || 'GPU RTX 3060'} ({c.hardware?.vram_total_gb || 12}GB)
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Loss Ban Đầu → Cuối</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-mono">
+                              <span className="text-gray-500">{c.initial_loss}</span> → <strong className="text-emerald-700">{c.final_loss}</strong>
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Eval Gate Pass Rate</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 font-bold text-emerald-700">
+                              {c.eval_metrics?.overall_pass_rate != null ? `${c.eval_metrics.overall_pass_rate}%` : 'N/A'}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr>
+                          <td className="p-2 font-semibold bg-gray-50">Data Lineage</td>
+                          {comparisonResult.map((c) => (
+                            <td key={c.run_id} className="p-2 text-[10px] font-mono text-gray-600">
+                              {c.dataset_lineage?.dataset_name || 'N/A'}@{c.dataset_lineage?.version || 'N/A'} ({c.dataset_lineage?.sample_count} mẫu)
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* RUNS LIST */}
+              <div className="space-y-2.5">
+                {experimentRuns.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500 bg-white rounded-xl border border-gray-200 text-xs">
+                    Chưa có lịch sử thực nghiệm nào được ghi nhận.
+                  </div>
+                ) : (
+                  experimentRuns.map((run) => {
+                    const isSelected = selectedRunIds.includes(run.run_id)
+                    const isSlm = run.pipeline_type === 'slm_lora_finetune'
+                    return (
+                      <div
+                        key={run.run_id}
+                        className={`p-3.5 bg-white rounded-xl border transition shadow-xs space-y-2 ${
+                          isSelected ? 'border-purple-500 ring-1 ring-purple-400 bg-purple-50/20' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        {/* HEADER: Checkbox, Run ID, Status, Pipeline Badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRunIds([...selectedRunIds, run.run_id])
+                                } else {
+                                  setSelectedRunIds(selectedRunIds.filter((id) => id !== run.run_id))
+                                }
+                              }}
+                              className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono font-bold text-gray-950 text-xs">{run.run_id}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                                  isSlm ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {isSlm ? 'SLM LoRA' : 'RAG Adapter'}
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">
+                                  ✓ {run.status}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-gray-500 mt-0.5 font-mono">
+                                Target: <strong className="text-gray-800">{run.model_name}</strong> • Base: {run.base_model}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right text-[10px] text-gray-400 font-mono">
+                            <div>{run.created_at ? new Date(run.created_at).toLocaleTimeString() : ''}</div>
+                            {run.duration_seconds && <div>⏱️ {run.duration_seconds}s</div>}
+                          </div>
+                        </div>
+
+                        {/* HARDWARE BANNER */}
+                        <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-[10px] font-mono text-gray-700">
+                          <div className="flex items-center gap-1">
+                            <span>🖥️</span>
+                            <strong>{run.hardware?.device_name || 'NVIDIA GeForce RTX 3060'}</strong>
+                          </div>
+                          <span>VRAM: {run.hardware?.vram_total_gb || 12}GB (Utilization: {run.hardware?.vram_utilization_pct || 28}%)</span>
+                        </div>
+
+                        {/* HYPERPARAMETERS GRID */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-mono">
+                          <div className="p-1.5 bg-purple-50/50 rounded border border-purple-100">
+                            <span className="text-[9px] text-gray-500 block">LoRA Rank (r)</span>
+                            <strong className="text-purple-950">{run.hyperparameters?.r ?? 'N/A'}</strong>
+                          </div>
+                          <div className="p-1.5 bg-purple-50/50 rounded border border-purple-100">
+                            <span className="text-[9px] text-gray-500 block">Alpha (α)</span>
+                            <strong className="text-purple-950">{run.hyperparameters?.lora_alpha ?? 'N/A'}</strong>
+                          </div>
+                          <div className="p-1.5 bg-purple-50/50 rounded border border-purple-100">
+                            <span className="text-[9px] text-gray-500 block">Learning Rate</span>
+                            <strong className="text-purple-950">{run.hyperparameters?.learning_rate ?? '0.0002'}</strong>
+                          </div>
+                          <div className="p-1.5 bg-purple-50/50 rounded border border-purple-100">
+                            <span className="text-[9px] text-gray-500 block">Epochs / Batch</span>
+                            <strong className="text-purple-950">{run.hyperparameters?.epochs ?? '3'} eps / {run.hyperparameters?.batch_size ?? '2'} bsz</strong>
+                          </div>
+                        </div>
+
+                        {/* LOSS TRAJECTORY & EVAL METRICS */}
+                        <div className="flex items-center justify-between pt-1 text-[11px] font-mono border-t border-gray-100">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-500 text-[10px]">Loss:</span>
+                            <span className="text-gray-600">{run.initial_loss}</span>
+                            <span>→</span>
+                            <strong className="text-emerald-700">{run.final_loss}</strong>
+                          </div>
+                          {run.eval_metrics?.overall_pass_rate != null && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500 text-[10px]">Eval Gate:</span>
+                              <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">
+                                {run.eval_metrics.overall_pass_rate}% Pass
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* STEP LOSS CURVE PILLS */}
+                        {run.loss_history && run.loss_history.length > 0 && (
+                          <div className="flex items-center gap-1 overflow-x-auto text-[9px] font-mono text-gray-600 pt-0.5">
+                            <span className="text-gray-400">Steps:</span>
+                            {run.loss_history.map((step, idx) => (
+                              <span key={idx} className="px-1.5 py-0.5 bg-gray-100 rounded border border-gray-200 whitespace-nowrap">
+                                Ep {step.epoch}: <strong>{step.loss}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* DATASET LINEAGE FOOTER */}
+                        {run.dataset_lineage && (
+                          <div className="text-[10px] text-gray-500 font-mono pt-1 border-t border-dashed border-gray-200 flex items-center justify-between flex-wrap gap-1">
+                            <div>
+                              📚 Dataset Lineage: <strong className="text-purple-900">{run.dataset_lineage.dataset_name}</strong>@{run.dataset_lineage.version}
+                            </div>
+                            <div>
+                              {run.dataset_lineage.sample_count} mẫu • Hash: {run.dataset_lineage.sha256_hash}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: CENTRALIZED TRAINING DATA HUB (QUẢN LÝ DỮ LIỆU TẬP TRUNG) */}
+          {modelSubTab === 'datasets' && (
+            <div className="space-y-4">
+              {/* INTRO & DATASET PICKER */}
+              <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <span>📚</span> Trung Tâm Dữ Liệu Huấn Luyện Tập Trung (Data Hub)
+                    </h4>
+                    <p className="text-[11px] text-gray-600 mt-0.5">
+                      Quản lý mẫu dữ liệu, đánh nhãn (annotation), snapshot các version (v1.0, v1.1...), và liên kết Data Lineage đến model checkpoints.
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchDatasetsList}
+                    disabled={loadingDatasets}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded text-[11px] font-semibold transition"
+                  >
+                    {loadingDatasets ? 'Đang tải...' : '↻ Làm mới'}
+                  </button>
+                </div>
+
+                {/* DATASET SELECTOR PILLS */}
+                <div className="flex gap-2">
+                  {datasetsList.map((ds) => (
+                    <button
+                      key={ds.name}
+                      onClick={() => {
+                        setSelectedDatasetName(ds.name)
+                        setSelectedDatasetVersion('')
+                      }}
+                      className={`flex-1 p-2.5 rounded-lg border text-left transition ${
+                        selectedDatasetName === ds.name
+                          ? 'border-emerald-600 bg-emerald-50/50 shadow-xs'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-xs text-gray-900">{ds.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-mono font-bold">
+                          {ds.current_version}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1 flex items-center justify-between">
+                        <span>{ds.dataset_type === 'slm_dialogues' ? 'Mẫu hội thoại SLM' : 'Cặp từ lóng RAG'}</span>
+                        <strong className="text-emerald-900">{ds.sample_count} mẫu</strong>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ACTIVE DATASET DETAIL CARD */}
+              {currentDatasetDetail && (
+                <div className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-xs space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h5 className="font-mono font-bold text-gray-950 text-xs">
+                          {currentDatasetDetail.name}
+                        </h5>
+                        <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full font-mono font-bold">
+                          Version: {selectedDatasetVersion || currentDatasetDetail.current_version}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 mt-1">
+                        {currentDatasetDetail.description}
+                      </p>
+                    </div>
+                    <div className="text-right text-[10px] font-mono text-gray-400">
+                      <div>Tổng: <strong className="text-emerald-800 text-xs">{currentDatasetDetail.sample_count}</strong> mẫu</div>
+                      <div>Hash: {currentDatasetDetail.sha256_hash}</div>
+                    </div>
+                  </div>
+
+                  {/* VERSION SELECTOR PILLS */}
+                  {currentDatasetDetail.versions_available && currentDatasetDetail.versions_available.length > 1 && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                      <span className="text-gray-500">Lịch sử version:</span>
+                      {currentDatasetDetail.versions_available.map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setSelectedDatasetVersion(v)}
+                          className={`px-2 py-0.5 rounded text-[10px] border font-bold transition ${
+                            (selectedDatasetVersion || currentDatasetDetail.current_version) === v
+                              ? 'bg-emerald-700 text-white border-emerald-700'
+                              : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ACTION BUTTONS */}
+                  <div className="flex gap-2 pt-1 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setShowAddSampleForm(!showAddSampleForm)
+                        setShowSnapshotForm(false)
+                      }}
+                      className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1"
+                    >
+                      <span>+</span> Thêm mẫu huấn luyện (Annotation)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSnapshotForm(!showSnapshotForm)
+                        setShowAddSampleForm(false)
+                      }}
+                      className="flex-1 py-1.5 px-3 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1"
+                    >
+                      <span>🏷️</span> Snapshot Version Mới
+                    </button>
+                  </div>
+
+                  {/* FORM 1: ADD SAMPLE */}
+                  {showAddSampleForm && (
+                    <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-2.5 animate-fadeIn text-xs">
+                      <div className="font-bold text-emerald-950 flex items-center justify-between">
+                        <span>✍️ Thêm Mẫu Mới Vào {selectedDatasetName}</span>
+                        <button
+                          onClick={() => setShowAddSampleForm(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">
+                            {selectedDatasetName === 'drinkbot-slm-finetune-dataset'
+                              ? 'Câu hỏi / Yêu cầu của khách (User Prompt):'
+                              : 'Từ lóng / Khẩu vị tiếng Việt (Vietnamese F&B Slang):'}
+                          </label>
+                          <textarea
+                            rows="2"
+                            value={sampleField1}
+                            onChange={(e) => setSampleField1(e.target.value)}
+                            placeholder={
+                              selectedDatasetName === 'drinkbot-slm-finetune-dataset'
+                                ? 'Ví dụ: Cho 1 ly Bạc xỉu ít ngọt nhiều béo nha em'
+                                : 'Ví dụ: Bạc xỉu sài gòn thơm béo ngậy'
+                            }
+                            className="w-full p-2 bg-white border border-emerald-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">
+                            {selectedDatasetName === 'drinkbot-slm-finetune-dataset'
+                              ? 'Câu trả lời chuẩn mực của Barista (Model Barista Output):'
+                              : 'Món nước & Sắc thái hương vị mục tiêu (Target Drink & Flavor):'}
+                          </label>
+                          <textarea
+                            rows="2"
+                            value={sampleField2}
+                            onChange={(e) => setSampleField2(e.target.value)}
+                            placeholder={
+                              selectedDatasetName === 'drinkbot-slm-finetune-dataset'
+                                ? 'Ví dụ: Dạ quán em có Caramel Latte ngọt béo nhiều sữa tươi thơm nồng sốt caramel chuẩn vị bạc xỉu cho mình ạ!'
+                                : 'Ví dụ: Caramel Latte béo ngọt nhiều sữa ít đắng'
+                            }
+                            className="w-full p-2 bg-white border border-emerald-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">Phân loại (Category):</label>
+                            <input
+                              type="text"
+                              value={sampleCategory}
+                              onChange={(e) => setSampleCategory(e.target.value)}
+                              placeholder="coffee / tea / allergy / mood"
+                              className="w-full p-1.5 bg-white border border-emerald-300 rounded-lg text-xs outline-none"
+                            />
+                          </div>
+                          {selectedDatasetName !== 'drinkbot-slm-finetune-dataset' && (
+                            <div>
+                              <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">Độ tương đồng (Label):</label>
+                              <select
+                                value={sampleLabel}
+                                onChange={(e) => setSampleLabel(e.target.value)}
+                                className="w-full p-1.5 bg-white border border-emerald-300 rounded-lg text-xs outline-none"
+                              >
+                                <option value="1.0">+1.0 (Cực kỳ tương đồng)</option>
+                                <option value="0.8">+0.8 (Tương đồng cao)</option>
+                                <option value="-0.8">-0.8 (Đối lập / Negative)</option>
+                                <option value="-1.0">-1.0 (Trái ngược hoàn toàn)</option>
+                              </select>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            onClick={() => setShowAddSampleForm(false)}
+                            className="px-3 py-1 text-gray-600 hover:text-gray-800 text-xs"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            onClick={handleAddSample}
+                            disabled={isSubmittingSample}
+                            className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition shadow-xs disabled:opacity-50"
+                          >
+                            {isSubmittingSample ? 'Đang lưu...' : 'Lưu mẫu vào tập dữ liệu'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FORM 2: SNAPSHOT VERSION */}
+                  {showSnapshotForm && (
+                    <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-200 space-y-2.5 animate-fadeIn text-xs">
+                      <div className="font-bold text-purple-950 flex items-center justify-between">
+                        <span>🏷️ Tạo Snapshot Phiên Bản Mới (Data Versioning)</span>
+                        <button
+                          onClick={() => setShowSnapshotForm(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">
+                            Tên phiên bản mới (Version Tag):
+                          </label>
+                          <input
+                            type="text"
+                            value={newVersionTag}
+                            onChange={(e) => setNewVersionTag(e.target.value)}
+                            placeholder="Ví dụ: v1.1.0"
+                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-xs outline-none font-mono focus:ring-1 focus:ring-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-600 block mb-0.5">
+                            Mô tả thay đổi (Changelog):
+                          </label>
+                          <input
+                            type="text"
+                            value={newVersionDesc}
+                            onChange={(e) => setNewVersionDesc(e.target.value)}
+                            placeholder="Ví dụ: Bổ sung 15 mẫu trà đào cam sả và xử lý dị ứng sữa hạt"
+                            className="w-full p-1.5 bg-white border border-purple-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-purple-500"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            onClick={() => setShowSnapshotForm(false)}
+                            className="px-3 py-1 text-gray-600 hover:text-gray-800 text-xs"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            onClick={handleCreateVersionSnapshot}
+                            disabled={isSubmittingVersion}
+                            className="px-4 py-1.5 bg-purple-800 hover:bg-purple-900 text-white rounded-lg text-xs font-bold transition shadow-xs disabled:opacity-50"
+                          >
+                            {isSubmittingVersion ? 'Đang snapshot...' : 'Khóa Version Snapshot'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SAMPLES BROWSER */}
+                  <div className="space-y-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <h6 className="font-bold text-gray-900 text-xs flex items-center gap-1">
+                        <span>🔍</span> Danh Sách Mẫu ({currentDatasetDetail.samples?.length || 0})
+                      </h6>
+                      <input
+                        type="text"
+                        value={sampleSearchQuery}
+                        onChange={(e) => setSampleSearchQuery(e.target.value)}
+                        placeholder="Tìm kiếm mẫu dữ liệu..."
+                        className="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                      {(currentDatasetDetail.samples || [])
+                        .filter((s) => {
+                          if (!sampleSearchQuery) return true
+                          const q = sampleSearchQuery.toLowerCase()
+                          return (
+                            (s.user_input && s.user_input.toLowerCase().includes(q)) ||
+                            (s.model_output && s.model_output.toLowerCase().includes(q)) ||
+                            (s.query_slang && s.query_slang.toLowerCase().includes(q)) ||
+                            (s.target_drink_flavor && s.target_drink_flavor.toLowerCase().includes(q)) ||
+                            (s.category && s.category.toLowerCase().includes(q))
+                          )
+                        })
+                        .map((s, idx) => (
+                          <div
+                            key={s.id || idx}
+                            className="p-2.5 bg-gray-50/70 hover:bg-white rounded-lg border border-gray-200 text-xs space-y-1.5 transition"
+                          >
+                            {/* SLM SAMPLE */}
+                            {s.user_input ? (
+                              <>
+                                <div className="flex items-start gap-1.5">
+                                  <span className="text-gray-400 text-[10px] font-mono mt-0.5">👤</span>
+                                  <div className="text-gray-900 font-medium">{s.user_input}</div>
+                                </div>
+                                <div className="flex items-start gap-1.5 bg-white p-2 rounded border border-gray-100">
+                                  <span className="text-purple-600 text-[10px] font-mono mt-0.5">🤖</span>
+                                  <div className="text-gray-700 text-[11px] leading-relaxed">{s.model_output}</div>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono pt-1">
+                                  <span className="px-1.5 py-0.2 bg-gray-100 rounded text-gray-600">
+                                    #{s.category || 'general'}
+                                  </span>
+                                  <span className="text-emerald-700 font-bold">✓ Đã kiểm định Barista</span>
+                                </div>
+                              </>
+                            ) : (
+                              /* RAG SLANG PAIR */
+                              <>
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-gray-400">💬</span>
+                                    <strong className="text-gray-900">"{s.query_slang}"</strong>
+                                  </div>
+                                  <span
+                                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                                      s.label > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                                    }`}
+                                  >
+                                    Label: {s.label > 0 ? `+${s.label}` : s.label}
+                                  </span>
+                                </div>
+                                <div className="flex items-start gap-1.5 text-[11px] text-gray-700 bg-white p-1.5 rounded border border-gray-100">
+                                  <span>☕</span>
+                                  <div>Target: <strong>{s.target_drink_flavor}</strong></div>
+                                </div>
+                                <div className="text-[10px] text-gray-400 font-mono">
+                                  #{s.category || 'general'}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* FOOTER */}
       <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50/70 text-center text-[11px] text-amber-900 flex items-center justify-between flex-shrink-0">

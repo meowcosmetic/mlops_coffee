@@ -68,5 +68,11 @@ export const api = {
   deleteEvalItem: (id) => request(`/telemetry/evals/dataset/items/${id}`, { method: 'DELETE' }),
   runBenchmark: (promptVersion, modelName) => request('/telemetry/evals/run', { method: 'POST', body: { prompt_version: promptVersion, model_name: modelName } }),
   latestBenchmark: () => request('/telemetry/evals/latest'),
+  experimentRuns: (pipelineType) => request(`/telemetry/experiments/runs${pipelineType ? `?pipeline_type=${pipelineType}` : ''}`),
+  compareRuns: (runIds) => request(`/telemetry/experiments/compare?run_ids=${encodeURIComponent(runIds.join(','))}`),
+  trainingDatasets: (type) => request(`/telemetry/datasets${type ? `?dataset_type=${type}` : ''}`),
+  datasetDetails: (name, version) => request(`/telemetry/datasets/${encodeURIComponent(name)}${version ? `?version=${encodeURIComponent(version)}` : ''}`),
+  addDatasetSample: (name, sample) => request(`/telemetry/datasets/${encodeURIComponent(name)}/samples`, { method: 'POST', body: { sample } }),
+  createDatasetVersion: (name, version, description) => request(`/telemetry/datasets/${encodeURIComponent(name)}/versions`, { method: 'POST', body: { version, description } }),
 }
 

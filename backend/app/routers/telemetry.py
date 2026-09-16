@@ -246,6 +246,76 @@ async def get_latest_eval():
     return {"benchmark": latest}
 
 
+# --- EXPERIMENT TRACKING & RUN HISTORY ---
+
+@router.get("/experiments/runs")
+async def get_experiment_runs(pipeline_type: str | None = None):
+    """Retrieve historical model training runs with hyperparameters, loss curves, and hardware stats."""
+    from app.services.experiment_tracker_service import experiment_tracker
+    runs = experiment_tracker.list_runs(pipeline_type=pipeline_type)
+    return {"total": len(runs), "runs": runs}
 
 
+@router.get("/experiments/compare")
+async def compare_experiment_runs(run_ids: str):
+    """Compare hyperparameters and metrics across multiple experiment runs (comma-separated run_ids)."""
+    from app.services.experiment_tracker_service import experiment_tracker
+    ids = [i.strip() for i in run_ids.split(",") if i.strip()]
+    comparison = experiment_tracker.compare_runs(ids)
+    return comparison
+
+
+# --- CENTRALIZED TRAINING DATA MANAGEMENT & LINEAGE ---
+
+class DatasetSampleCreateRequest(BaseModel):
+    sample: dict
+
+
+class DatasetVersionCreateRequest(BaseModel):
+    version: str
+    description: str = ""
+
+
+@router.get("/datasets")
+async def get_training_datasets(dataset_type: str | None = None):
+    """List centralized training datasets (SLM Dialogues & RAG Slang Pairs) with version metadata."""
+    from app.services.training_data_service import training_data_service
+    datasets = training_data_service.list_datasets(dataset_type=dataset_type)
+    return {"datasets": datasets}
+
+
+@router.get("/datasets/{name}")
+async def get_training_dataset_details(name: str, version: str | None = None):
+    """Get detailed samples and metadata for a specific dataset version."""
+    from app.services.training_data_service import training_data_service
+    data = training_data_service.get_dataset(name, version=version)
+    if not data:
+        raise HTTPException(status_code=404, detail=f"Dataset '{name}' not found")
+    return {"dataset": data}
+
+
+@router.post("/datasets/{name}/samples")
+async def add_sample_to_dataset(name: str, payload: DatasetSampleCreateRequest):
+    """Add a new training dialogue or slang pair to the dataset (Data Annotation / Curation)."""
+    from app.services.training_data_service import training_data_service
+    try:
+        created = training_data_service.add_sample(name, payload.sample)
+        return {"status": "created", "sample": created}
+    except ValueError as err:
+        raise HTTPException(status_code=404, detail=str(err))
+
+
+@router.post("/datasets/{name}/versions")
+async def create_dataset_version(name: str, payload: DatasetVersionCreateRequest):
+    """Snapshot a new immutable version of the dataset (Data Versioning)."""
+    from app.services.training_data_service import training_data_service
+    try:
+        new_ver = training_data_service.create_new_version(
+            dataset_name=name,
+            new_version=payload.version,
+            description=payload.description,
+        )
+        return {"status": "created", "version": new_ver}
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
 
