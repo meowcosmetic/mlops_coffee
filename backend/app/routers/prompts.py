@@ -21,9 +21,22 @@ async def list_versions(name: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=PromptVersionOut, status_code=status.HTTP_201_CREATED)
 async def create_version(payload: PromptVersionCreate, db: AsyncSession = Depends(get_db)):
-    row = await prompts.create_version(
-        db, name=payload.name, template=payload.template, version=payload.version, activate=payload.activate
+    existing = await db.scalar(
+        select(PromptVersion).where(
+            PromptVersion.name == payload.name, PromptVersion.version == payload.version
+        )
     )
+    if existing is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Prompt version '{payload.name}' v{payload.version} already exists",
+        )
+    try:
+        row = await prompts.create_version(
+            db, name=payload.name, template=payload.template, version=payload.version, activate=payload.activate
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     await db.commit()
     await db.refresh(row)
     return row
