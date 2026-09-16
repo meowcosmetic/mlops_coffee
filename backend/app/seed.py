@@ -82,7 +82,7 @@ SAMPLE_DRINKS = [
         "price": 4.95,
         "category": "tea",
     },
-    # --- Fruit juice (5) ---
+    # --- Fruit juice (4) ---
     {
         "name": "Fresh Orange Juice",
         "description": "100% freshly squeezed oranges, nothing else.",
@@ -117,6 +117,35 @@ SAMPLE_DRINKS = [
         "ingredients": ["apple", "cucumber", "celery", "ginger"],
         "price": 5.25,
         "category": "fruit juice",
+    },
+    {
+        "name": "Citrus Detox Cleanse",
+        "description": "Lemon, turmeric and ginger detox blend to reset your morning.",
+        "ingredients": ["lemon", "turmeric", "ginger", "water"],
+        "price": 5.00,
+        "category": "fruit juice",
+    },
+    # --- Protein (3) ---
+    {
+        "name": "Chocolate Protein Shake",
+        "description": "Rich chocolate whey protein blended with milk and banana.",
+        "ingredients": ["whey protein", "milk", "banana", "cocoa"],
+        "price": 6.00,
+        "category": "protein",
+    },
+    {
+        "name": "Vanilla Protein Smoothie",
+        "description": "Vanilla plant-based protein with oat milk and berries.",
+        "ingredients": ["pea protein", "oat milk", "strawberry", "blueberry"],
+        "price": 6.25,
+        "category": "protein",
+    },
+    {
+        "name": "Peanut Butter Protein Blast",
+        "description": "Peanut butter and banana protein shake for post-workout recovery.",
+        "ingredients": ["whey protein", "peanut butter", "banana", "milk"],
+        "price": 6.50,
+        "category": "protein",
     },
 ]
 
