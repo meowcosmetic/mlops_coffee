@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, clearToken } from '../api'
+import LangfuseSidebar from '../components/LangfuseSidebar'
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -73,6 +74,8 @@ export default function Chat() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [menu, setMenu] = useState([])
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [sidebarTrigger, setSidebarTrigger] = useState(0)
   const bottomRef = useRef(null)
   const navigate = useNavigate()
 
@@ -118,6 +121,8 @@ export default function Chat() {
           orderError: null,
         },
       ])
+      // Kích hoạt cập nhật sidebar log
+      setSidebarTrigger((t) => t + 1)
     } catch (err) {
       setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${err.message}` }])
     } finally {
@@ -152,73 +157,139 @@ export default function Chat() {
     }
   }
 
+  async function handleNewChat() {
+    if (busy) return
+    const confirmed = window.confirm('Bạn có muốn xóa toàn bộ lịch sử và bắt đầu cuộc hội thoại mới không?')
+    if (!confirmed) return
+
+    setBusy(true)
+    try {
+      const res = await api.clearHistory()
+      setMessages([
+        {
+          role: 'assistant',
+          content: res.welcome_message || 'Welcome! I am your drink assistant — how can I help you today?',
+        },
+      ])
+      setInput('')
+    } catch (err) {
+      alert(`Lỗi khi làm mới cuộc hội thoại: ${err.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function logout() {
     clearToken()
     navigate('/')
   }
 
   return (
-    <div className="min-h-screen bg-amber-50 flex flex-col">
-      <header className="bg-white shadow px-4 py-3 flex justify-between items-center">
-        <h1 className="font-bold text-amber-800">🍹 Drink Bot</h1>
-        <nav className="flex gap-4 text-sm">
-          <Link to="/profile" className="text-amber-700 hover:underline">Profile</Link>
+    <div className="h-screen bg-amber-50 flex flex-col overflow-hidden">
+      {/* HEADER */}
+      <header className="bg-white shadow-xs px-4 py-3 flex justify-between items-center z-20 flex-shrink-0 border-b border-amber-100">
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+          <h1 className="font-bold text-amber-900 flex items-center gap-1.5 text-base">
+            🍹 Drink Bot
+          </h1>
+
+          {/* NÚT CUỘC HỘI THOẠI MỚI */}
+          <button
+            type="button"
+            onClick={handleNewChat}
+            disabled={busy}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition shadow-2xs hover:shadow-sm"
+            title="Xóa lịch sử chat và bắt đầu cuộc hội thoại mới"
+          >
+            <span>✨</span> Cuộc hội thoại mới
+          </button>
+
+          {/* NÚT LANGFUSE INSPECTOR */}
+          <button
+            type="button"
+            onClick={() => setShowSidebar((s) => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition ${
+              showSidebar
+                ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+            }`}
+            title="Bật/Tắt bảng giám sát Langfuse"
+          >
+            <span className={`w-2 h-2 rounded-full ${showSidebar ? 'bg-white' : 'bg-amber-600'}`}></span>
+            📊 {showSidebar ? 'Đóng Log Langfuse' : 'Mở Log Langfuse'}
+          </button>
+        </div>
+        <nav className="flex gap-4 text-sm items-center">
+          <Link to="/profile" className="text-amber-700 hover:underline font-medium">Profile</Link>
           <button onClick={logout} className="text-gray-500 hover:underline">Log out</button>
         </nav>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 max-w-2xl w-full mx-auto">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}>
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                m.role === 'user'
-                  ? 'bg-amber-600 text-white rounded-br-sm'
-                  : 'bg-white shadow text-gray-800 rounded-bl-sm'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{m.content}</p>
-              {m.recommendations?.map((rec) => (
-                <RecommendationCard key={rec.name} rec={rec} onFavorite={favoriteByName} />
-              ))}
-              {m.pendingOrder && (
-                <OrderCard
-                  order={m.pendingOrder}
-                  busy={busy}
-                  error={m.orderError}
-                  onDecision={(orderId, confirmed) => decideOrder(i, orderId, confirmed)}
-                />
-              )}
-            </div>
-          </div>
-        ))}
-        {busy && (
-          <div className="flex justify-start mb-3">
-            <div className="bg-white shadow rounded-2xl px-4 py-2 text-gray-400 animate-pulse">
-              Thinking…
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </main>
+      {/* WORKSPACE: CHAT AREA + SIDEBAR CO-EXIST (CO GIÃN TRANG) */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* MAIN CHAT COLUMN */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden transition-all duration-300">
+          <main className="flex-1 overflow-y-auto p-4 max-w-2xl w-full mx-auto">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} mb-3`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                    m.role === 'user'
+                      ? 'bg-amber-600 text-white rounded-br-sm shadow-sm'
+                      : 'bg-white shadow border border-amber-100 text-gray-800 rounded-bl-sm'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                  {m.recommendations?.map((rec) => (
+                    <RecommendationCard key={rec.name} rec={rec} onFavorite={favoriteByName} />
+                  ))}
+                  {m.pendingOrder && (
+                    <OrderCard
+                      order={m.pendingOrder}
+                      busy={busy}
+                      error={m.orderError}
+                      onDecision={(orderId, confirmed) => decideOrder(i, orderId, confirmed)}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+            {busy && (
+              <div className="flex justify-start mb-3">
+                <div className="bg-white shadow rounded-2xl px-4 py-2 text-amber-700/60 border border-amber-100 animate-pulse text-sm">
+                  ☕ Đang suy nghĩ gợi ý...
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </main>
 
-      <form onSubmit={send} className="bg-white border-t p-3">
-        <div className="max-w-2xl mx-auto flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. I want something refreshing and not too sweet"
-            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold px-5 rounded-full transition"
-          >
-            Send
-          </button>
+          <form onSubmit={send} className="bg-white border-t border-amber-100 p-3 flex-shrink-0">
+            <div className="max-w-2xl mx-auto flex gap-2">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="e.g. I want something refreshing and not too sweet"
+                className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={busy || !input.trim()}
+                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold px-5 rounded-full transition text-sm shadow-sm"
+              >
+                Send
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+
+        {/* SIDEBAR COMPONENT (NẰM TRONG FLOW, CO TRANG LẠI CHỨ KHÔNG ĐÈ LÊN) */}
+        <LangfuseSidebar
+          isOpen={showSidebar}
+          onClose={() => setShowSidebar(false)}
+          onRefreshTrigger={sidebarTrigger}
+        />
+      </div>
     </div>
   )
 }

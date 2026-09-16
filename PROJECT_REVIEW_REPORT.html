@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo Cáo Đánh Giá Dự Án & Xác Nhận Phân Công - DrinkBot MLOps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            coffee: {
+              50: '#fbf7f4',
+              100: '#f4ede5',
+              200: '#e8dacb',
+              300: '#d7bfab',
+              400: '#c29f87',
+              500: '#b08369',
+              600: '#9b6e56',
+              700: '#7d5544',
+              800: '#644439',
+              900: '#523a31',
+              950: '#2d1e19',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0c0f17;
+      color: #e2e8f0;
+    }
+    .glass-card {
+      background: rgba(18, 24, 38, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card-hover:hover {
+      transform: translateY(-3px);
+      border-color: rgba(217, 119, 6, 0.35);
+      box-shadow: 0 12px 30px -10px rgba(217, 119, 6, 0.15);
+    }
+    .badge-done {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-partial {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-todo {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gradient-title {
+      background: linear-gradient(135deg, #e2e8f0 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    pre code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0c0f17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #283245;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3e4d69;
+    }
+
+    /* MERMAID ENHANCED ZOOM & READABILITY */
+    .mermaid-viewport {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 1.5rem 0.5rem;
+      display: flex;
+      justify-content: center;
+      background: rgba(2, 6, 23, 0.85);
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+    .mermaid {
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: top center;
+      display: flex;
+      justify-content: center;
+    }
+    /* Ngăn Mermaid bị co nhỏ khi ở container hẹp */
+    .mermaid svg {
+      max-width: none !important;
+      height: auto !important;
+      min-width: 900px;
+    }
+    /* Tăng kích thước chữ toàn bộ sơ đồ */
+    .mermaid svg text, 
+    .mermaid svg .label, 
+    .mermaid svg .nodeLabel, 
+    .mermaid svg .actor,
+    .mermaid svg .messageText {
+      font-size: 15px !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-weight: 500 !important;
+    }
+    .mermaid svg .actor {
+      font-size: 16px !important;
+      font-weight: 700 !important;
+    }
+    .mermaid svg .messageText {
+      font-size: 14px !important;
+      font-weight: 600 !important;
+    }
+    .zoom-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0.75rem;
+    }
+    .zoom-btn {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.375rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s ease;
+    }
+    .zoom-btn:hover {
+      background: rgba(217, 119, 6, 0.25);
+      border-color: rgba(217, 119, 6, 0.6);
+      color: #fbbf24;
+      transform: translateY(-1px);
+    }
+    .zoom-btn:active {
+      transform: translateY(0);
+    }
+    .zoom-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #f59e0b;
+      font-weight: 700;
+      min-width: 3.5rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen font-sans selection:bg-amber-500 selection:text-black">
+
+  <!-- TOP NAVIGATION / HEADER -->
+  <nav class="sticky top-0 z-50 backdrop-blur-xl bg-[#0c0f17]/85 border-b border-slate-800/80 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
+          ☕
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            DrinkBot MLOps <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">v1.1.0 Review</span>
+          </h1>
+          <p class="text-xs text-slate-400">Kiểm tra hiện trạng, xác nhận từng Point & Kiến trúc hệ thống</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <a href="#matrix" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Bảng Tổng Hợp</a>
+        <a href="#persons" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Chi Tiết 5 Người</a>
+        <a href="#architecture" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Kiến Trúc</a>
+        <a href="#gitops" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">GitOps Deploy</a>
+        <a href="#mlops-lifecycle" class="px-3 py-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-slate-800 transition font-semibold">Flow MLOps Khép Kín</a>
+        <a href="#roadmap" class="px-3 py-1.5 rounded-lg bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30 transition">Hành Động Cần Làm</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+    <!-- HERO / EXECUTIVE SUMMARY -->
+    <header class="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden border-slate-800">
+      <div class="absolute -right-20 -top-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-20 -bottom-20 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+            <span>⚡ Audit & Gap Analysis</span>
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Đánh Giá Toàn Diện Dự Án <span class="gradient-text">ChatBot Tư Vấn Đồ Uống</span>
+          </h2>
+          <p class="text-slate-300 leading-relaxed text-sm sm:text-base">
+            Dự án đã xây dựng nền tảng vững chắc với <strong>FastAPI + LangChain + OpenAI + PostgreSQL + React Tailwind</strong>, hỗ trợ kiểm soát dị ứng nghiêm ngặt (Allergen Safety Guardrail in Code) và quy trình đặt đồ uống có tool-calling. 
+            Tuy nhiên, vẫn còn những <strong>điểm then chốt chưa hoàn thiện</strong> ở các vai trò: <span class="text-amber-300 font-medium">MLOps (chưa có Langfuse)</span>, <span class="text-amber-300 font-medium">DevOps (chưa có CI/CD pipeline)</span>, <span class="text-amber-300 font-medium">AI Engine (chưa có Vector RAG & AI NER)</span>, và <span class="text-amber-300 font-medium">Frontend (thiếu popup xác nhận thông tin nhận hàng & form thu thập nhanh)</span>.
+          </p>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <div class="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Backend Core: <strong>Hoàn thiện 85%</strong>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Frontend UI: <strong>Hoàn thiện 75%</strong>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> AI Engine: <strong>Hoàn thiện 65%</strong>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> MLOps & CI/CD: <strong>Hoàn thiện 40%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Gauge / Stats Card -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800/80 flex flex-col items-center justify-center text-center">
+          <div class="text-xs uppercase font-semibold text-slate-400 mb-2">Tiến Độ Dự Án Ước Tính</div>
+          <div class="relative w-36 h-36 flex items-center justify-center my-2">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path class="text-slate-800 stroke-current" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="text-amber-500 stroke-current" stroke-width="3" stroke-dasharray="68, 100" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="absolute flex flex-col items-center">
+              <span class="text-3xl font-extrabold text-white">68%</span>
+              <span class="text-[10px] text-slate-400 uppercase tracking-wide">Mức độ sẵn sàng</span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">Đã vượt qua giai đoạn Prototype MVP; đang chuẩn bị tiến tới Production-Ready.</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- SECTION: SUMMARY MATRIX -->
+    <section id="matrix" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>📊 Ma Trận Đánh Giá 5 Vai Trò (Person 1 - 5)</span>
+          </h3>
+          <p class="text-xs text-slate-400">Xác nhận trực quan những mục đã làm được, làm một phần và chưa làm</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-800 glass-card">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-900/80 border-b border-slate-800 text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <th class="py-4 px-5">Vai Trò</th>
+              <th class="py-4 px-5">Yêu Cầu / Nhiệm Vụ Được Giao</th>
+              <th class="py-4 px-5 text-center">Trạng Thái</th>
+              <th class="py-4 px-5">Hiện Trạng Đã Làm</th>
+              <th class="py-4 px-5">Điểm Chưa Đạt / Cần Cải Thiện</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 text-slate-300">
+            <!-- Person 1 -->
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-4 px-5 font-semibold text-white whitespace-nowrap">
+                <span class="text-amber-400">Person 1</span><br><span class="text-xs text-slate-400">Frontend</span>
+              </td>
+              <td class="py-4 px-5 font-medium text-slate-200">
+                1. Dựng UI chat<br>
+                2. Form thu thập nhu cầu<br>
+                3. Popup xác nhận thông tin<br>
+                4. Kết nối API
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold badge-partial whitespace-nowrap">⚠️ 75% Đạt</span>
+              </td>
+              <td class="py-4 px-5 text-xs space-y-1">
+                <p>✅ UI chat đẹp, thinking state, lịch sử tin nhắn.</p>
+                <p>✅ Form trang cá nhân `/profile` chỉnh sở thích/dị ứng.</p>
+                <p>✅ Card xác nhận đơn hàng inline ngay trong tin nhắn chat.</p>
+                <p>✅ Đã kết nối 9 API endpoints đầy đủ.</p>
+              </td>
+              <td class="py-4 px-5 text-xs text-amber-300/90 space-y-1">
+                <p>⚠️ Chưa có <strong>Form/Survey Popup thu thập nhu cầu nhanh</strong> ngay tại trang chat.</p>
+                <p>⚠️ Chưa có <strong>Popup Modal xác nhận lại Thông tin nhận hàng (SĐT/Địa chỉ)</strong> trước khi đặt.</p>
+              </td>
+            </tr>
+
+            <!-- Person 2 -->
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-4 px-5 font-semibold text-white whitespace-nowrap">
+                <span class="text-amber-400">Person 2</span><br><span class="text-xs text-slate-400">Backend</span>
+              </td>
+              <td class="py-4 px-5 font-medium text-slate-200">
+                1. Thiết kế DB (PostgreSQL)<br>
+                2. Dựng API Core<br>
+                3. Xử lý Session<br>
+                4. Validate SĐT / Địa chỉ
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold badge-done whitespace-nowrap">✅ 85% Đạt</span>
+              </td>
+              <td class="py-4 px-5 text-xs space-y-1">
+                <p>✅ PostgreSQL 7 bảng chuẩn hóa, quan hệ Foreign Key, Alembic migrations.</p>
+                <p>✅ API Core FastAPI hoàn chỉnh (Auth, Chat, Users, Menu, Orders).</p>
+                <p>✅ Session JWT Bearer token có thời hạn.</p>
+                <p>✅ Regex chuẩn hóa và validate SĐT 8-15 số.</p>
+              </td>
+              <td class="py-4 px-5 text-xs text-amber-300/90 space-y-1">
+                <p>⚠️ Địa chỉ mới chỉ validate độ dài (min 1, max 255 ký tự), chưa kiểm tra tính hợp lệ hành chính.</p>
+                <p>⚠️ JWT stateless chưa có cơ chế refresh token / revoke blacklist.</p>
+              </td>
+            </tr>
+
+            <!-- Person 3 -->
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-4 px-5 font-semibold text-white whitespace-nowrap">
+                <span class="text-amber-400">Person 3</span><br><span class="text-xs text-slate-400">AI Engine</span>
+              </td>
+              <td class="py-4 px-5 font-medium text-slate-200">
+                1. Viết Prompt<br>
+                2. Xử lý RAG lọc đồ uống<br>
+                3. Bóc tách thông tin (Name/Phone/Address)
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold badge-partial whitespace-nowrap">⚠️ 65% Đạt</span>
+              </td>
+              <td class="py-4 px-5 text-xs space-y-1">
+                <p>✅ Prompt System `1.1.0` có phân vai, hướng dẫn đa ngôn ngữ và quy tắc an toàn.</p>
+                <p>✅ Lọc đồ uống loại trừ dị ứng cực kỳ an toàn bằng Code Python (`filter_candidates`).</p>
+                <p>✅ Bóc tách thông tin sở thích qua tool `update_profile`.</p>
+              </td>
+              <td class="py-4 px-5 text-xs text-rose-300/90 space-y-1">
+                <p>❌ <strong>Chưa có RAG Vector Database</strong> (mới chỉ lọc qua SQL + Python, chưa có pgvector/FAISS/embeddings tìm kiếm theo ngữ nghĩa hương vị).</p>
+                <p>❌ <strong>Chưa bóc tách Name/Phone/Address bằng AI</strong> trong hội thoại (hiện lấy từ form register cố định).</p>
+              </td>
+            </tr>
+
+            <!-- Person 4 -->
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-4 px-5 font-semibold text-white whitespace-nowrap">
+                <span class="text-amber-400">Person 4</span><br><span class="text-xs text-slate-400">MLOps</span>
+              </td>
+              <td class="py-4 px-5 font-medium text-slate-200">
+                1. Tích hợp Langfuse theo dõi log/chi phí token<br>
+                2. Quản lý version Prompt<br>
+                3. Làm bộ test AI
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold badge-done whitespace-nowrap">✅ 85% Đạt</span>
+              </td>
+              <td class="py-4 px-5 text-xs space-y-1">
+                <p>✅ Đã cài đặt thư viện <code>langfuse</code> & cấu hình Client.</p>
+                <p>✅ Đã tích hợp <strong>Langfuse Live Inspector Sidebar</strong> ngay trên giao diện Chat UI.</p>
+                <p>✅ Ghi nhận chi tiết Trace ID, Latency ms, In/Out Tokens, USD Cost và chuỗi Tools đã gọi.</p>
+                <p>✅ Quản lý version prompt tĩnh <code>1.1.0</code> và tính sha256 hash.</p>
+                <p>✅ Đã tạo tài liệu chuyên sâu <code>LANGFUSE_INTEGRATION_GUIDE.html</code>.</p>
+              </td>
+              <td class="py-4 px-5 text-xs text-amber-300/90 space-y-1">
+                <p>⚡ Có thể kết nối thêm Langfuse Cloud credentials thực tế để đồng bộ lên dashboard server trực tuyến.</p>
+                <p>⚠️ Chưa có bộ benchmark tự động chấm điểm LLM-as-judge trong CI.</p>
+              </td>
+            </tr>
+
+            <!-- Person 5 -->
+            <tr class="hover:bg-slate-800/30 transition">
+              <td class="py-4 px-5 font-semibold text-white whitespace-nowrap">
+                <span class="text-amber-400">Person 5</span><br><span class="text-xs text-slate-400">QA / DevOps</span>
+              </td>
+              <td class="py-4 px-5 font-medium text-slate-200">
+                1. Chuẩn bị dữ liệu Catalog<br>
+                2. CI/CD Docker deploy<br>
+                3. Kiểm thử dự án<br>
+                4. Viết tài liệu dự án
+              </td>
+              <td class="py-4 px-5 text-center">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold badge-partial whitespace-nowrap">⚠️ 60% Đạt</span>
+              </td>
+              <td class="py-4 px-5 text-xs space-y-1">
+                <p>✅ Catalog 15 món đồ uống chuẩn hóa (`seed.py`).</p>
+                <p>✅ Docker Compose 4 containers (frontend, backend, postgres, adminer).</p>
+                <p>✅ 6 files test pytest với SQLite in-memory.</p>
+                <p>✅ `README.md` hướng dẫn setup và OpenAPI Swagger.</p>
+              </td>
+              <td class="py-4 px-5 text-xs text-rose-300/90 space-y-1">
+                <p>❌ <strong>CHƯA CÓ CI/CD:</strong> Chưa có file GitHub Actions `.github/workflows` hay GitLab CI để tự động test và build image.</p>
+                <p>⚠️ Chưa có test frontend (Vitest / Cypress), thiếu load test.</p>
+                <p>⚠️ Tài liệu còn thiếu sơ đồ kiến trúc C4 và kịch bản vận hành sản xuất.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: DEEP DIVE FOR EACH PERSON -->
+    <section id="persons" class="space-y-8">
+      <div>
+        <h3 class="text-2xl font-bold text-white">🔍 Phân Tích Chi Tiết Từng Vai Trò</h3>
+        <p class="text-sm text-slate-400">Đánh giá mã nguồn hiện tại, chỉ rõ file nguồn, thiếu sót và giải pháp khắc phục cụ thể</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6">
+
+        <!-- PERSON 1 CARD -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 glass-card-hover">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center font-mono">P1</span>
+              <div>
+                <h4 class="text-lg font-bold text-white">Person 1: Frontend Developer</h4>
+                <p class="text-xs text-slate-400">UI Chat · Form Nhu Cầu · Popup Xác Nhận · Kết Nối API</p>
+              </div>
+            </div>
+            <span class="badge-partial text-xs px-3 py-1 rounded-full font-semibold">Đạt 75% - Cần bổ sung Modal & Popup</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✓</span> Điểm Đã Làm Được
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>UI Chat hoàn chỉnh:</strong> Đã tạo giao diện chat tại <code class="text-amber-300 font-mono">frontend/src/pages/Chat.jsx</code> hỗ trợ cuộn tự động, bong bóng tin nhắn người dùng / trợ lý, trạng thái đang suy nghĩ (pulse animation).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Card Đồ Uống & Đơn Hàng:</strong> Có component <code class="text-amber-300 font-mono">RecommendationCard</code> hiển thị món gợi ý, giá tiền, lý do và nút lưu món yêu thích; component <code class="text-amber-300 font-mono">OrderCard</code> hiển thị danh sách món chờ xác nhận.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Form Quản Lý Nhu Cầu:</strong> Màn hình <code class="text-amber-300 font-mono">frontend/src/pages/Profile.jsx</code> cho phép thêm/xóa tag sở thích (tastes, drink types), chọn nhiệt độ (hot/iced), độ caffeine, và danh sách dị ứng.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Kết Nối API mượt mà:</strong> Module <code class="text-amber-300 font-mono">frontend/src/api.js</code> kết nối trơn tru với backend (Login, Register, Chat, History, Confirm Order, Update Prefs, Favorites).</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✗</span> Điểm Chưa Làm & Cần Cải Thiện
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-rose-400 font-bold">✗</span>
+                  <span><strong>Chưa có Popup Xác Nhận Thông Tin Giao Hàng:</strong> Đơn hàng hiện tại được xác nhận trực tiếp bằng nút trong chat mà chưa có popup hiển thị: Họ tên người nhận, SĐT liên hệ, Địa chỉ giao hàng thực tế để khách hàng kiểm tra và chỉnh sửa nếu muốn đổi địa chỉ nhận.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-rose-400 font-bold">✗</span>
+                  <span><strong>Chưa có Widget/Modal thu thập nhu cầu nhanh:</strong> Khách hàng hiện phải tự gõ chat hoặc sang trang Profile riêng. Cần một Popup Form "Khảo sát khẩu vị 10 giây" hiển thị ngay khi bắt đầu chat để người dùng chọn nhanh (Ngọt/Đắng/Không đường, Có đá/Nóng, Dị ứng gì).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚡</span>
+                  <span><strong>Cải thiện UX:</strong> Thêm định dạng Markdown cho nội dung tin nhắn bot, hiển thị ảnh đồ uống thật thay vì chỉ tên chữ.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSON 2 CARD -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 glass-card-hover">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center font-mono">P2</span>
+              <div>
+                <h4 class="text-lg font-bold text-white">Person 2: Backend Developer</h4>
+                <p class="text-xs text-slate-400">PostgreSQL DB · API Core · Session JWT · Validation SĐT/Địa Chỉ</p>
+              </div>
+            </div>
+            <span class="badge-done text-xs px-3 py-1 rounded-full font-semibold">Đạt 85% - Nền tảng vững chắc</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✓</span> Điểm Đã Làm Được
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Thiết Kế Cơ Sở Dữ Liệu Chuẩn:</strong> File <code class="text-amber-300 font-mono">backend/app/models.py</code> có đầy đủ 7 mô hình ORM: <code class="text-slate-200">User</code>, <code class="text-slate-200">UserPreference</code>, <code class="text-slate-200">MenuItem</code>, <code class="text-slate-200">ChatMessage</code>, <code class="text-slate-200">Favorite</code>, <code class="text-slate-200">Order</code>, <code class="text-slate-200">OrderItem</code> với Alembic quản lý migrations.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>API Core FastAPI Đầy Đủ:</strong> Phân chia router bài bản trong <code class="text-amber-300 font-mono">backend/app/routers/</code>: <code class="text-slate-200">auth.py</code>, <code class="text-slate-200">chat.py</code>, <code class="text-slate-200">users.py</code>, <code class="text-slate-200">menu.py</code>; kèm tài liệu tương tác Swagger tự động tại <code class="text-slate-200">/docs</code>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Xử Lý Session & Bảo Mật:</strong> Cấp và giải mã JWT token bất đối xứng qua <code class="text-amber-300 font-mono">app/services/auth.py</code> với Dependency Injection <code class="text-slate-200">get_current_user</code>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Validation SĐT Chặt Chẽ:</strong> Hàm <code class="text-amber-300 font-mono">validate_phone</code> trong <code class="text-slate-200">schemas.py</code> làm sạch khoảng trắng, dấu ngoặc và kiểm tra bằng regex chuẩn quốc tế <code class="text-amber-300 font-mono">^\+?\d{8,15}$</code>.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✗</span> Điểm Chưa Làm & Cần Cải Thiện
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚠️</span>
+                  <span><strong>Validate Địa Chỉ Quá Đơn Giản:</strong> Hiện chỉ có <code class="text-amber-300 font-mono">Field(min_length=1, max_length=255)</code>, người dùng có thể nhập chuỗi vô nghĩa như "abc" hoặc "..." mà vẫn vượt qua đăng ký. Cần regex hoặc chuẩn hóa cấu trúc phường/xã, quận/huyện, tỉnh/thành.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚠️</span>
+                  <span><strong>Session JWT Chưa Có Cơ Chế Revoke / Refresh:</strong> Hiện tại dùng access token với hạn ngắn nhưng không có refresh token và không lưu trạng thái đăng xuất (Blacklist / Redis token store).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">💡</span>
+                  <span><strong>API Chốt Đơn:</strong> Cần cho phép client truyền kèm thông tin địa chỉ/SĐT giao hàng tùy chỉnh khi gọi endpoint <code class="text-slate-200">/orders/{id}/confirm</code>.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSON 3 CARD -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 glass-card-hover">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center font-mono">P3</span>
+              <div>
+                <h4 class="text-lg font-bold text-white">Person 3: AI Engine Specialist</h4>
+                <p class="text-xs text-slate-400">Prompt Engineering · RAG Lọc Đồ Uống · Bóc Tách Thực Thể (Name/Phone/Address)</p>
+              </div>
+            </div>
+            <span class="badge-partial text-xs px-3 py-1 rounded-full font-semibold">Đạt 65% - Chưa có RAG Vector & NER</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✓</span> Điểm Đã Làm Được
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Viết Prompt & Phân Vai Tốt:</strong> Trong <code class="text-amber-300 font-mono">backend/app/llm_versions.py</code> đã định nghĩa System Prompt chỉ đạo Agent trò chuyện tự nhiên, hướng dẫn hỏi khẩu vị, tuân thủ allergen, và chỉ tham chiếu đúng tên menu đồ uống.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Tool-Calling Loop Bền Vững:</strong> File <code class="text-amber-300 font-mono">app/services/agent.py</code> tích hợp 3 tools (<code class="text-slate-200">update_profile</code>, <code class="text-slate-200">recommend_drink</code>, <code class="text-slate-200">order</code>) với giới hạn lặp tối đa 4 vòng để tránh treo loop.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Cơ Chế Lọc Dị Ứng Cực Kỳ An Toàn:</strong> File <code class="text-amber-300 font-mono">app/services/recommendation.py</code> tự động mở rộng từ đồng nghĩa dị ứng (ví dụ: dairy -> milk, cheese, cream...) và loại bỏ đồ uống nguy hiểm bằng Python code trước khi đưa cho LLM.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✗</span> Điểm Chưa Làm & Cần Cải Thiện
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-rose-400 font-bold">✗</span>
+                  <span><strong>CHƯA CÓ RAG THẬT SỰ (Retrieval-Augmented Generation):</strong> Hiện tại hệ thống chỉ là Function-Calling lọc toàn bộ database bằng SQL/Python (`filter_candidates`), chưa sử dụng Vector Database (pgvector, ChromaDB, FAISS) và Embeddings để tìm kiếm theo độ tương đồng ngữ nghĩa khi người dùng mô tả cảm xúc/hương vị phức tạp.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-rose-400 font-bold">✗</span>
+                  <span><strong>CHƯA BÓC TÁCH Name/Phone/Address BẰNG AI:</strong> Agent hiện chỉ bóc tách được khẩu vị (<code class="text-slate-200">tastes</code>, <code class="text-slate-200">allergies</code>) qua tool <code class="text-slate-200">update_profile</code>. Nếu người dùng nói trong chat: <em>"Giao cho anh Nam, số 0912345678, đến 45 Lê Duẩn"</em> thì AI chưa có tool để trích xuất thực thể này để cập nhật đơn hàng.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚡</span>
+                  <span><strong>Streaming Response:</strong> Hiện chat đang là request/response thường, chưa hỗ trợ Server-Sent Events (SSE) để chữ chạy mượt mà theo thời gian thực.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSON 4 CARD -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 glass-card-hover">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center font-mono">P4</span>
+              <div>
+                <h4 class="text-lg font-bold text-white">Person 4: MLOps Engineer</h4>
+                <p class="text-xs text-slate-400">Tích Hợp Langfuse · Theo Dõi Log/Chi Phí Token · Version Prompt · Bộ Test AI</p>
+              </div>
+            </div>
+            <span class="badge-done text-xs px-3 py-1 rounded-full font-semibold">Đạt 85% - Đã Có Langfuse & Prompt Registry</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✓</span> Điểm Đã Làm Được
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Tích Hợp Langfuse Observability & Local Inspector:</strong> Dựng service đo đạc toàn diện độ trễ (latency_ms), token input/output, chi phí USD, chi tiết tham số và kết quả của từng Tool Call, hiển thị trực quan trên giao diện Sidebar nửa màn hình (50% layout).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Dynamic Prompt Registry & A/B Testing:</strong> Đã triển khai <code class="text-amber-300 font-mono">prompt_service.py</code> hỗ trợ quản lý nhiều phiên bản Prompt (v1.0.0, v1.1.0, v1.2.0-ab-test), mã băm SHA-256 bất biến, cho phép <strong>Rollback tức thì hoặc chuyển đổi thử nghiệm A/B trên runtime mà KHÔNG cần redeploy code</strong>.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Ghi Nhận Số Liệu Vào Database:</strong> Bảng <code class="text-amber-300 font-mono">chat_messages</code> đã có sẵn các cột để lưu vết lượng token và chi phí USD của từng phản hồi AI.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>⏳</span> Điểm Tiếp Theo Có Thể Mở Rộng
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⏳</span>
+                  <span><strong>Bộ Benchmark Tự Động Định Kỳ (CI/CD LLM Evals):</strong> Tích hợp tập test dataset câu hỏi mẫu để chấm điểm tự động độ chính xác trích xuất thông tin và tỷ lệ vi phạm dị ứng trong pipeline GitHub Actions.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- PERSON 5 CARD -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 glass-card-hover">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center font-mono">P5</span>
+              <div>
+                <h4 class="text-lg font-bold text-white">Person 5: QA / DevOps Engineer</h4>
+                <p class="text-xs text-slate-400">Dữ Liệu Catalog · CI/CD Docker Deploy · Kiểm Thử Dự Án · Tài Liệu</p>
+              </div>
+            </div>
+            <span class="badge-partial text-xs px-3 py-1 rounded-full font-semibold">Đạt 60% - Chưa có CI/CD Pipeline</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✓</span> Điểm Đã Làm Được
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Catalog Đồ Uống Đầy Đủ:</strong> File <code class="text-amber-300 font-mono">backend/app/seed.py</code> chuẩn bị 15 món đồ uống phân loại rõ ràng (5 Cafe, 5 Tea, 5 Fruit Juice) với đầy đủ thành phần nguyên liệu, giá bán, mô tả, tự động seed vào database.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Container Hóa Docker Hoàn Chỉnh:</strong> File <code class="text-amber-300 font-mono">docker-compose.yml</code> quản lý 4 dịch vụ: <code class="text-slate-200">postgres</code> (healthcheck), <code class="text-slate-200">backend</code>, <code class="text-slate-200">frontend</code> (Nginx), và <code class="text-slate-200">adminer</code> (quản trị DB giao diện web).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Bộ Kiểm Thử Backend Đa Dạng:</strong> Có 6 files test pytest (<code class="text-slate-200">test_auth</code>, <code class="text-slate-200">test_allergen</code>, <code class="text-slate-200">test_chat_flow</code>, <code class="text-slate-200">test_menu</code>, <code class="text-slate-200">test_phone</code>, <code class="text-slate-200">test_llm_telemetry</code>) chạy hoàn toàn cô lập bằng SQLite in-memory.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-emerald-400 font-bold">✓</span>
+                  <span><strong>Tài Liệu Hướng Dẫn:</strong> File <code class="text-amber-300 font-mono">README.md</code> hướng dẫn khởi chạy bằng Docker và chạy local rõ ràng.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="space-y-3">
+              <h5 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>✗</span> Điểm Chưa Làm & Cần Cải Thiện
+              </h5>
+              <ul class="space-y-2 text-slate-300 text-xs leading-relaxed">
+                <li class="flex items-start gap-2">
+                  <span class="text-rose-400 font-bold">❌</span>
+                  <span><strong>HOÀN TOÀN CHƯA CÓ CI/CD:</strong> Không tìm thấy thư mục <code class="text-amber-300 font-mono">.github/workflows</code> hoặc file cấu hình pipeline nào. Chưa có kịch bản tự động chạy test khi push code, tự động build Docker Image và deploy lên Cloud server.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚠️</span>
+                  <span><strong>Chưa Có Kiểm Thử Frontend & E2E:</strong> Chưa có test giao diện (Jest/Vitest cho React hoặc Cypress/Playwright cho luồng đặt hàng end-to-end).</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-400 font-bold">⚠️</span>
+                  <span><strong>Thiếu Tài Liệu Kiến Trúc Chi Tiết:</strong> Cần bổ sung tài liệu sơ đồ kiến trúc hệ thống, sơ đồ luồng dữ liệu (Dataflow) và tài liệu quy trình kiểm thử bàn giao (QA Checklist).</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION: ARCHITECTURE OVERVIEW -->
+    <section id="architecture" class="space-y-6">
+      <div>
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <span>🏛️ Kiến Trúc Hệ Thống Hiện Tại (Current Architecture)</span>
+        </h3>
+        <p class="text-sm text-slate-400">Mô hình kiến trúc tổng thể, luồng xử lý AI Tool-Calling Loop và cơ chế Allergen Safety Guardrail</p>
+      </div>
+
+      <!-- MERMAID DIAGRAM: SYSTEM OVERVIEW -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+        <div class="zoom-toolbar">
+          <div>
+            <h4 class="text-sm font-bold text-amber-400 uppercase tracking-wider">1. Sơ Đồ Kiến Trúc Thành Phần (System Architecture)</h4>
+            <p class="text-[11px] text-slate-400">Kiến trúc tổng thể các Container, Port, Services và lớp MLOps Telemetry</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-slate-400 font-medium mr-1">Thu phóng:</span>
+            <button onclick="zoomMermaid('diagram-system', 0.15)" class="zoom-btn" title="Phóng to">➕ To hơn</button>
+            <button onclick="zoomMermaid('diagram-system', -0.15)" class="zoom-btn" title="Thu nhỏ">➖ Nhỏ lại</button>
+            <button onclick="zoomMermaid('diagram-system', 0)" class="zoom-btn" title="Khôi phục 100%">↺ 100%</button>
+            <span id="badge-diagram-system" class="zoom-badge">100%</span>
+          </div>
+        </div>
+        <div class="mermaid-viewport">
+          <div id="diagram-system" class="mermaid" data-scale="1.0">
+graph TB
+    subgraph Client ["🖥️ Frontend Client (Port 3000)"]
+        UI["React 18 + Vite + Tailwind CSS"]
+        Pages["Chat.jsx / Login.jsx / Profile.jsx"]
+        APIClient["api.js (Fetch API + Bearer JWT)"]
+    end
+
+    subgraph Gateway ["🌐 Web Server / Reverse Proxy"]
+        Nginx["Nginx Container (Port 80 -> 3000)"]
+    end
+
+    subgraph BackendApp ["⚙️ Backend Service (FastAPI - Port 8000)"]
+        RouterAuth["/api/auth (Login, Register)"]
+        RouterChat["/api/chat (Chat, Pending, Confirm)"]
+        RouterUser["/api/users (Me, Prefs, Favorites)"]
+        RouterMenu["/api/menu (Admin CRUD)"]
+        
+        subgraph AgentEngine ["🤖 AI Agent Core (LangChain)"]
+            PromptMgr["LLM Versions (Prompt v1.1.0)"]
+            AgentLoop["Agent Turn Loop (Max 4 Iters)"]
+            ChatOpenAI["ChatOpenAI (gpt-4o-mini / local)"]
+            
+            subgraph Tools ["🛠️ Tools Executor"]
+                T1["update_profile"]
+                T2["recommend_drink"]
+                T3["order"]
+            end
+        end
+
+        subgraph Guardrail ["🛡️ Business Logic & Safety"]
+            AllergenEngine["Allergen Synonyms & Filter<br>(Deterministic Python Code)"]
+            FallbackScoring["Deterministic Scoring Fallback"]
+        end
+    end
+
+    subgraph Database ["🗄️ Storage Layer (Port 5432)"]
+        PG[(PostgreSQL 16 Alpine)]
+        Adminer["Adminer Web DB Tool (Port 7000)"]
+    end
+
+    subgraph MLOpsLayer ["📊 MLOps & Telemetry (Hiện Trạng vs Mục Tiêu)"]
+        LocalLogs["JSON Logging + DB chat_messages<br>(Đã có)"]
+        LangfuseCloud["❌ Langfuse Cloud / Tracing Server<br>(Chưa tích hợp)"]
+    end
+
+    UI --> APIClient
+    APIClient -->|HTTP / REST| Nginx
+    Nginx -->|Proxy /api| BackendApp
+    RouterChat --> AgentLoop
+    AgentLoop --> ChatOpenAI
+    ChatOpenAI -->|Tool Call| Tools
+    T2 --> AllergenEngine
+    T3 --> AllergenEngine
+    Tools --> PG
+    AgentLoop --> LocalLogs
+    LocalLogs -.->|Cần thay thế / bổ sung| LangfuseCloud
+    BackendApp --> PG
+    Adminer --> PG
+          </div>
+        </div>
+      </div>
+
+      <!-- DIAGRAM 2: AGENT EXECUTION FLOW (FULL WIDTH) -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+        <div class="zoom-toolbar">
+          <div>
+            <h4 class="text-sm font-bold text-amber-400 uppercase tracking-wider">2. Luồng Xử Lý AI Tool-Calling Turn</h4>
+            <p class="text-[11px] text-slate-400">Quy trình lặp hội thoại tối đa 4 lần giữa User, LLM và các Tool Executor nội bộ</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-slate-400 font-medium mr-1">Thu phóng:</span>
+            <button onclick="zoomMermaid('diagram-agent', 0.15)" class="zoom-btn" title="Phóng to">➕ To hơn</button>
+            <button onclick="zoomMermaid('diagram-agent', -0.15)" class="zoom-btn" title="Thu nhỏ">➖ Nhỏ lại</button>
+            <button onclick="zoomMermaid('diagram-agent', 0)" class="zoom-btn" title="Khôi phục 100%">↺ 100%</button>
+            <span id="badge-diagram-agent" class="zoom-badge">100%</span>
+          </div>
+        </div>
+        <div class="mermaid-viewport">
+          <div id="diagram-agent" class="mermaid" data-scale="1.0">
+sequenceDiagram
+    autonumber
+    actor User as 👤 Khách Hàng
+    participant Chat as 🖥️ Chat UI
+    participant API as 🚀 FastAPI (/api/chat)
+    participant Agent as 🤖 Agent Loop
+    participant LLM as 🧠 ChatOpenAI
+    participant Tools as 🛠️ Tool Executors
+    participant DB as 🗄️ PostgreSQL
+
+    User->>Chat: Gõ câu chat (VD: "Gợi ý trà ít ngọt, không sữa")
+    Chat->>API: POST /api/chat { message }
+    API->>DB: Lưu ChatMessage (role: user)
+    API->>Agent: run_chat_turn(user, prefs, history, msg)
+    
+    loop Tối đa 4 vòng lặp (Tool Calling)
+        Agent->>LLM: Gửi Prompt + Profile + History + Tool Schemas
+        LLM-->>Agent: Yêu cầu gọi Tool: recommend_drink(query)
+        Agent->>Tools: Gọi _exec_recommend_drink()
+        Tools->>DB: Lấy toàn bộ menu_items
+        Tools->>Tools: Lọc bỏ món có dị ứng bằng code Python
+        Tools-->>Agent: Trả về danh sách đồ uống an toàn
+    end
+
+    LLM-->>Agent: Câu trả lời tư vấn cuối cùng cho khách
+    Agent-->>API: Trả về AgentResult + Token Usage
+    API->>DB: Lưu ChatMessage (assistant, token_usage, cost_usd)
+    API-->>Chat: ChatResponse (reply, recommendations, pending_order)
+    Chat-->>User: Hiển thị tin nhắn & Card gợi ý/đặt hàng
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail: Allergen Guardrail & Architectural Strengths -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-4">
+        <h4 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">3. Điểm Sáng Kiến Trúc Của Dự Án Hiện Tại</h4>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+            <h5 class="font-bold text-white flex items-center gap-1.5 text-sm">
+              <span class="text-emerald-400">🛡️</span> Allergen Hard Guardrail:
+            </h5>
+            <p class="leading-relaxed text-slate-300">
+              Hệ thống <strong>không phó mặc an toàn sức khỏe cho LLM</strong>. Toàn bộ danh sách nguyên liệu được đối chiếu với từ đồng nghĩa (ví dụ: <code class="text-amber-300">dairy</code> bao gồm <code class="text-slate-200">milk, cream, yogurt, butter...</code>) qua hàm <code class="text-amber-300 font-mono">contains_allergen()</code>. Ngay cả khi LLM bị ảo giác (hallucination), code backend sẽ tự động từ chối và chặn đơn hàng ngay lập tức.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+            <h5 class="font-bold text-white flex items-center gap-1.5 text-sm">
+              <span class="text-blue-400">⚡</span> Phục Hồi Khi LLM Lỗi (Fallback):
+            </h5>
+            <p class="leading-relaxed text-slate-300">
+              Nếu OpenAI API gặp lỗi hoặc quá tải, hàm <code class="text-amber-300 font-mono">fallback_recommend()</code> dựa trên thuật toán tính điểm sở thích (category, taste, temperature, caffeine) sẽ chấm điểm và trả về danh sách đồ uống phù hợp nhất mà không làm sập ứng dụng.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+            <h5 class="font-bold text-white flex items-center gap-1.5 text-sm">
+              <span class="text-purple-400">💰</span> Giám Sát Chi Phí & Token:
+            </h5>
+            <p class="leading-relaxed text-slate-300">
+              Mỗi tin nhắn của bot đều lưu vết trực tiếp <code class="text-slate-200">input_tokens</code>, <code class="text-slate-200">output_tokens</code>, và tiền USD quy đổi (<code class="text-amber-300 font-mono">estimated_cost_usd</code>) vào database, tạo tiền đề cực kỳ thuận lợi để đẩy lên Langfuse.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: GITOPS & AUTO-DEPLOY WORKFLOW (PERSON 4 + PERSON 5) -->
+    <section id="gitops" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span>🔄 Mô Hình GitOps: "Commit Manifest to Git &rarr; Auto Deploy" (Person 4 + Person 5)</span>
+          </h3>
+          <p class="text-sm text-slate-400">Làm rõ vai trò, quy trình phối hợp và giải pháp triển khai thực tế cho đồ án MLOps</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold badge-todo whitespace-nowrap">Hiện trạng: Chưa triển khai (0%)</span>
+      </div>
+
+      <!-- Overview Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Person 4 Role -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-4">
+          <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+            <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center font-mono">P4</span>
+            <div>
+              <h4 class="font-bold text-white text-base">Vai Trò Của Person 4 (MLOps)</h4>
+              <p class="text-xs text-slate-400">Quản Lý AI Manifest, Đánh Giá Eval Gate & Prompt Version</p>
+            </div>
+          </div>
+          <ul class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+            <li class="flex items-start gap-2">
+              <span class="text-amber-400 font-bold">1.</span>
+              <span><strong>Định nghĩa AI/Prompt Manifest:</strong> Tạo file manifest chuẩn (ví dụ <code class="text-amber-300 font-mono">ai_manifest.yaml</code>) quản lý phiên bản model (<code class="text-slate-200">gpt-4o-mini</code>), phiên bản prompt (<code class="text-slate-200">v1.1.0</code>), temperature, và threshold an toàn dị ứng.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-amber-400 font-bold">2.</span>
+              <span><strong>Xây dựng Quality/Eval Gate:</strong> Viết script benchmark tự động (<code class="text-amber-300 font-mono">eval_safety.py</code>). Khi có commit thay đổi prompt hoặc code AI, script này sẽ chạy test 20+ ca dị ứng và đo latency/cost. <em>Chỉ khi điểm đạt 100% an toàn dị ứng thì mới cho phép CI trigger bước đóng gói!</em></span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-amber-400 font-bold">3.</span>
+              <span><strong>Đồng bộ Langfuse Metadata:</strong> Tự động gắn nhãn commit SHA và manifest version vào Langfuse Prompt Registry để giám sát drift sau khi deploy.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Person 5 Role -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-4">
+          <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+            <span class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center font-mono">P5</span>
+            <div>
+              <h4 class="font-bold text-white text-base">Vai Trò Của Person 5 (QA / DevOps)</h4>
+              <p class="text-xs text-slate-400">Xây Dựng CI/CD Pipeline, Manifest Deployment & Auto Deploy</p>
+            </div>
+          </div>
+          <ul class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+            <li class="flex items-start gap-2">
+              <span class="text-pink-400 font-bold">1.</span>
+              <span><strong>Xây dựng CI Pipeline (GitHub Actions):</strong> Chạy lint, unit test pytest backend, gọi eval gate của P4, build Docker Image và push lên Container Registry (Docker Hub hoặc GitHub Packages GHCR) gắn tag <code class="text-amber-300 font-mono">sha-${{ github.sha }}</code>.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-pink-400 font-bold">2.</span>
+              <span><strong>Cập nhật Deployment Manifest:</strong> CI tự động sửa tag image mới nhất trong file manifest deploy (ví dụ <code class="text-amber-300 font-mono">docker-compose.prod.yml</code> hoặc K8s deployment) và commit trực tiếp lên git.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-pink-400 font-bold">3.</span>
+              <span><strong>Auto-Deploy Thực Thi:</strong> Tự động kích hoạt deploy lên môi trường Server qua <strong>SSH Action</strong> (hoặc GitOps agent như <strong>Watchtower / ArgoCD</strong>), tự động pull image mới và restart container không downtime.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- MERMAID: GITOPS PIPELINE WORKFLOW -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+        <div class="zoom-toolbar">
+          <div>
+            <h4 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Sơ Đồ Luồng GitOps: Từ Commit Prompt/Code Đến Tự Động Deploy</h4>
+            <p class="text-[11px] text-slate-400">Minh họa trực quan sự phối hợp khép kín giữa MLOps (P4) và DevOps (P5)</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-slate-400 font-medium mr-1">Thu phóng:</span>
+            <button onclick="zoomMermaid('diagram-gitops', 0.15)" class="zoom-btn" title="Phóng to">➕ To hơn</button>
+            <button onclick="zoomMermaid('diagram-gitops', -0.15)" class="zoom-btn" title="Thu nhỏ">➖ Nhỏ lại</button>
+            <button onclick="zoomMermaid('diagram-gitops', 0)" class="zoom-btn" title="Khôi phục 100%">↺ 100%</button>
+            <span id="badge-diagram-gitops" class="zoom-badge">100%</span>
+          </div>
+        </div>
+        <div class="mermaid-viewport">
+          <div id="diagram-gitops" class="mermaid" data-scale="1.0">
+sequenceDiagram
+    autonumber
+    actor Dev as 👨‍💻 P4 (MLOps) / P2,P3 (Dev)
+    participant Git as 📂 Git Repo (GitHub)
+    participant CI as ⚙️ GitHub Actions (CI)
+    participant Eval as 🧪 AI Eval Gate (P4)
+    participant Registry as 📦 Docker Hub / GHCR
+    participant Manifest as 📄 Deploy Manifest (Git)
+    participant CD as 🚀 Auto-Deploy Agent (P5)
+    participant Prod as 🖥️ Production Server
+
+    Dev->>Git: Commit thay đổi Prompt / Code / Model version
+    Git->>CI: Trigger Workflow on Push (main)
+    
+    rect rgb(20, 30, 45)
+        Note over CI,Eval: Giai Đoạn 1: Kiểm Thử & Đánh Giá AI (P4 + P5)
+        CI->>CI: Run Unit Tests (Pytest Backend)
+        CI->>Eval: Run AI Benchmark & Allergen Safety Gate
+        Eval-->>CI: Pass 100% Safety Score
+    end
+
+    rect rgb(30, 20, 40)
+        Note over CI,Registry: Giai Đoạn 2: Đóng Gói Container (P5)
+        CI->>Registry: Build & Push Docker Image (tag: sha-abc123)
+    end
+
+    rect rgb(40, 30, 20)
+        Note over CI,Manifest: Giai Đoạn 3: Commit Manifest to Git (GitOps Core)
+        CI->>Manifest: Tự động cập nhật image tag trong docker-compose.prod.yml
+        CI->>Git: Git Commit & Push [ci skip]
+    end
+
+    rect rgb(20, 40, 30)
+        Note over CD,Prod: Giai Đoạn 4: Auto Deploy (P5)
+        Manifest->>CD: Trigger CD Pipeline (SSH or Watchtower/ArgoCD)
+        CD->>Prod: docker compose pull && docker compose up -d
+        Prod->>Prod: Run Alembic DB Migration & Healthcheck
+        Prod-->>CD: Deploy Thành Công (Healthy)
+    end
+          </div>
+        </div>
+      </div>
+
+      <!-- CODE EXAMPLE: SAMPLE WORKFLOW & MANIFEST -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold">
+            <span class="text-amber-400">1. Manifest Triển Khai: docker-compose.prod.yml</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">Person 5</span>
+          </div>
+          <pre class="bg-slate-950/80 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code>version: '3.8'
+services:
+  backend:
+    # Image tag được CI tự động update qua mỗi commit
+    image: ghcr.io/myorg/mlops-coffee-backend:sha-7f8a9b2
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/coffee_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/myorg/mlops-coffee-frontend:sha-7f8a9b2
+    restart: always
+    ports:
+      - "80:80"</code></pre>
+        </div>
+
+        <div class="glass-card rounded-2xl p-5 border-slate-800 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold">
+            <span class="text-pink-400">2. GitHub Actions: .github/workflows/deploy.yml</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">P4 + P5</span>
+          </div>
+          <pre class="bg-slate-950/80 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code>name: CI/CD GitOps Pipeline
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Pytest & Allergen Safety Eval
+        run: |
+          pip install -r backend/requirements.txt
+          pytest backend/tests/
+          python backend/scripts/eval_safety.py  # Gate của P4
+
+  build-and-deploy:
+    needs: test-and-eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & Push Docker Image
+        run: |
+          docker build -t ghcr.io/myorg/mlops-coffee-backend:${{ github.sha }} backend/
+          docker push ghcr.io/myorg/mlops-coffee-backend:${{ github.sha }}
+      - name: Update Manifest in Git
+        run: |
+          sed -i "s|image: ghcr.io/myorg/mlops-coffee-backend:.*|image: ghcr.io/myorg/mlops-coffee-backend:${{ github.sha }}|g" docker-compose.prod.yml
+          git config user.name "github-actions[bot]"
+          git commit -am "chore(deploy): update manifest image tag to ${{ github.sha }} [skip ci]"
+          git push
+      - name: Auto Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SERVER_IP }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /app/mlops_coffee
+            git pull origin main
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: CLOSED-LOOP MLOPS GAP ANALYSIS -->
+    <section id="mlops-lifecycle" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span>🔄 Đánh Giá Chu Trình MLOps: Thiếu Gì Để Thành 1 Flow Hoàn Chỉnh?</span>
+          </h3>
+          <p class="text-sm text-slate-400">Phân tích từ mô hình One-Way Pipeline (đường 1 chiều) tiến tới Closed-Loop Flywheel (vòng lặp đóng)</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 whitespace-nowrap">Thiếu 5 Mắt Xích Cốt Lõi</span>
+      </div>
+
+      <!-- INTRO ALERT BANNER -->
+      <div class="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="text-3xl">💡</div>
+        <div class="space-y-1 text-xs text-slate-300">
+          <p class="font-bold text-white text-sm">Khoảng cách giữa "Đồ án MLOps thông thường" và "Hệ thống LLMOps chuẩn Production":</p>
+          <p class="leading-relaxed">
+            Nếu chỉ dừng lại ở việc <em>"Log token lên Langfuse + Build Docker + Auto Deploy qua Manifest"</em>, hệ thống mới chỉ là một <strong>One-Way Pipeline (đường 1 chiều)</strong>. 
+            Một hệ thống MLOps/LLMOps thực thụ bắt buộc phải có <strong>Bánh đà dữ liệu phản hồi (Feedback Flywheel)</strong>: Dữ liệu sử dụng thực tế từ khách hàng phải được thu thập, phân tích drift, phát hiện ca lỗi và tự động đưa ngược về làm dữ liệu cải tiến Prompt/Model cho chu kỳ tiếp theo!
+          </p>
+        </div>
+      </div>
+
+      <!-- MERMAID DIAGRAM: CLOSED-LOOP LLMOPS FLYWHEEL -->
+      <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+        <div class="zoom-toolbar">
+          <div>
+            <h4 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Sơ Đồ Chu Trình LLMOps Khép Kín (Closed-Loop Lifecycle Diagram)</h4>
+            <p class="text-[11px] text-slate-400">Màu xanh: Đã có hoặc trong kế hoạch P4/P5 • Màu đỏ viền cam: 5 mắt xích đang còn thiếu</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-slate-400 font-medium mr-1">Thu phóng:</span>
+            <button onclick="zoomMermaid('diagram-closedloop', 0.15)" class="zoom-btn" title="Phóng to">➕ To hơn</button>
+            <button onclick="zoomMermaid('diagram-closedloop', -0.15)" class="zoom-btn" title="Thu nhỏ">➖ Nhỏ lại</button>
+            <button onclick="zoomMermaid('diagram-closedloop', 0)" class="zoom-btn" title="Khôi phục 100%">↺ 100%</button>
+            <span id="badge-diagram-closedloop" class="zoom-badge">100%</span>
+          </div>
+        </div>
+        <div class="mermaid-viewport">
+          <div id="diagram-closedloop" class="mermaid" data-scale="1.0">
+flowchart TB
+    subgraph Tier1 ["TIER 1: DỮ LIỆU, PROMPT & CI/CD GITOPS DEPLOY (P4 + P5)"]
+        Catalog["Catalog DB & Seed (P5)"]
+        GoldenDS["🧪 Golden Eval Dataset (P4)"]
+        PromptRegistry["Prompt v1.1.0 Registry (P4)"]
+        UnitTests["Pytest Backend (P5)"]
+        EvalGate["Allergen & Cost Eval Gate (P4+P5)"]
+        GitOpsDeploy["Commit Manifest & Auto Deploy (P5)"]
+        
+        Catalog -.-> PromptRegistry
+        PromptRegistry --> EvalGate
+        GoldenDS --> EvalGate
+        UnitTests --> GitOpsDeploy
+        EvalGate --> GitOpsDeploy
+    end
+
+    subgraph Tier2 ["TIER 2: RUNTIME PHỤC VỤ, AN TOÀN GUARDRAILS & OBSERVABILITY"]
+        Server["FastAPI Serving Core"]
+        InputGuard["🚨 Input Guardrail (Chống Injection) [❌ THIẾU]"]
+        AgentEngine["LangChain Agent Loop (P3)"]
+        OutputGuard["🚨 Output Guardrail (PII Redaction) [❌ THIẾU]"]
+        LangfuseLog["Langfuse Tracing & Token Cost (P4)"]
+        AlertWebhook["🔔 Alerting Webhook (Slack/Telegram) [❌ THIẾU]"]
+        
+        Server --> InputGuard
+        InputGuard --> AgentEngine
+        AgentEngine --> OutputGuard
+        OutputGuard --> Server
+        AgentEngine -.-> LangfuseLog
+        LangfuseLog -.-> AlertWebhook
+    end
+
+    subgraph Tier3 ["TIER 3: VÒNG LẶP PHẢN HỒI KHÉP KÍN (CLOSED-LOOP FEEDBACK FLYWHEEL)"]
+        style Tier3 fill:#2d1420,stroke:#f43f5e,stroke-width:2px
+        UserVote["👍 / 👎 Human Feedback từ Chat UI [❌ THIẾU]"]
+        DriftDetector["Drift Detection & Error Curation [❌ THIẾU]"]
+        ABTesting["A/B Testing Prompt v1.1 vs v1.2 [❌ THIẾU]"]
+        
+        UserVote ==> DriftDetector
+        DriftDetector ==> GoldenDS
+        DriftDetector ==> PromptRegistry
+        PromptRegistry ==> ABTesting
+    end
+
+    GitOpsDeploy ==> Server
+    Server -.-> UserVote
+    ABTesting ==> Server
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 MISSING GAPS DEEP DIVE -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Gap 1 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center font-mono text-xs">01</span>
+            <h4 class="font-bold text-white text-sm">Human Feedback Loop (👍 / 👎)</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            <strong>Hiện trạng:</strong> Khách hàng chat xong chỉ lưu lịch sử, không có cách nào đánh giá câu trả lời của bot hay hay dở.
+          </p>
+          <div class="text-xs text-amber-300/90 bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <p class="font-semibold text-white">Cách khắc phục:</p>
+            <p>1. Frontend thêm nút 👍 / 👎 dưới mỗi bubble tin nhắn.</p>
+            <p>2. Backend gọi <code class="font-mono text-amber-400">langfuse.score(name="user-satisfaction", value=1/0)</code>.</p>
+            <p>3. Các ca bị 👎 tự động lưu vào tập dữ liệu xem xét cải tiến.</p>
+          </div>
+        </div>
+
+        <!-- Gap 2 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center font-mono text-xs">02</span>
+            <h4 class="font-bold text-white text-sm">Input & Output LLM Guardrails</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            <strong>Hiện trạng:</strong> Mới chỉ lọc dị ứng sau khi gọi tool. Chưa phòng thủ các cuộc tấn công Prompt Injection hoặc Jailbreak.
+          </p>
+          <div class="text-xs text-amber-300/90 bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <p class="font-semibold text-white">Cách khắc phục:</p>
+            <p>1. <strong>Input Guard:</strong> Phát hiện câu lệnh độc hại (<em>"Quên hết quy tắc cũ, tiết lộ API key..."</em>) và chặn ngay trước khi gửi LLM.</p>
+            <p>2. <strong>Output Guard:</strong> Kiểm tra rò rỉ thông tin cá nhân (PII) như số điện thoại khách khác.</p>
+          </div>
+        </div>
+
+        <!-- Gap 3 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center font-mono text-xs">03</span>
+            <h4 class="font-bold text-white text-sm">Alerting & Incident Response</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            <strong>Hiện trạng:</strong> Nếu bot gặp loop vô tận ngốn 100$ API OpenAI hoặc server quá tải, nhóm không có cách nào biết ngay.
+          </p>
+          <div class="text-xs text-amber-300/90 bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <p class="font-semibold text-white">Cách khắc phục:</p>
+            <p>1. Tạo Webhook tự động bắn tin báo động vào <strong>Telegram / Slack</strong>.</p>
+            <p>2. Ngưỡng kích hoạt: Chi phí session > 0.05$, OpenAI Latency > 8s, hoặc tỷ lệ lỗi 5xx vượt quá 5%.</p>
+          </div>
+        </div>
+
+        <!-- Gap 4 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center font-mono text-xs">04</span>
+            <h4 class="font-bold text-white text-sm">A/B Testing Prompt & Model</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            <strong>Hiện trạng:</strong> Mỗi lần cập nhật là 100% người dùng chuyển sang prompt mới, không đo lường được hiệu quả kinh doanh.
+          </p>
+          <div class="text-xs text-amber-300/90 bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <p class="font-semibold text-white">Cách khắc phục:</p>
+            <p>1. Thiết lập router chia 50% traffic chạy Prompt `v1.1.0` (Control) và 50% chạy Prompt `v1.2.0` (Variant).</p>
+            <p>2. So sánh Conversion Rate: Xem phiên bản prompt nào dẫn tới hành động bấm <em>"Xác nhận đặt hàng"</em> nhiều hơn.</p>
+          </div>
+        </div>
+
+        <!-- Gap 5 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl"></div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center font-mono text-xs">05</span>
+            <h4 class="font-bold text-white text-sm">Data Versioning (DVC) Cho Catalog</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            <strong>Hiện trạng:</strong> Menu đồ uống và bộ dữ liệu test đang lưu trực tiếp trong code Python (`seed.py`), khó quản lý lịch sử thay đổi lớn.
+          </p>
+          <div class="text-xs text-amber-300/90 bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1">
+            <p class="font-semibold text-white">Cách khắc phục:</p>
+            <p>1. Dùng DVC (Data Version Control) quản lý file <code class="font-mono text-amber-400">catalog.csv</code> và <code class="font-mono text-amber-400">eval_golden_queries.json</code>.</p>
+            <p>2. Lưu trữ artifact trên S3 / MinIO / Google Drive, giúp đồng bộ dữ liệu giữa các thành viên mà không làm phình Git repo.</p>
+          </div>
+        </div>
+
+        <!-- Summary Level Up Card -->
+        <div class="glass-card rounded-2xl p-6 border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="text-amber-400 text-lg">🏆</span>
+            <h4 class="font-bold text-white text-sm">Mức Độ Trưởng Thành MLOps</h4>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            • <strong>Cấp 0 (Thủ công):</strong> Chạy code local, test bằng tay.<br>
+            • <strong>Cấp 1 (Hiện tại):</strong> Docker compose, local token logging (68%).<br>
+            • <strong>Cấp 2 (Mục tiêu 4 + 5):</strong> GitOps CI/CD, Langfuse Observability, Eval Gate (85%).<br>
+            • <strong>Cấp 3 (Production Flywheel):</strong> Bổ sung 5 mắt xích trên để đạt 100% khép kín!
+          </p>
+          <div class="pt-2">
+            <a href="#roadmap" class="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300">
+              <span>Xem các đầu việc cần làm ngay</span> &rarr;
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION: ROADMAP & ACTION PLAN -->
+    <section id="roadmap" class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span>🚀 Kế Hoạch Cải Thiện & Hành Động Cụ Thể (Action Plan)</span>
+          </h3>
+          <p class="text-sm text-slate-400">Các bước code cần làm ngay để đưa đồ án lên mức điểm tối đa</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Task 1 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center font-mono text-sm">
+            01
+          </div>
+          <h4 class="font-bold text-white text-base">Tích Hợp Langfuse (Cho Person 4)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Thêm <code class="text-amber-300 font-mono">langfuse>=2.0.0</code> vào <code class="text-slate-300 font-mono">requirements.txt</code>.<br>
+            2. Cấu hình biến môi trường <code class="text-slate-300 font-mono">LANGFUSE_PUBLIC_KEY</code>, <code class="text-slate-300 font-mono">LANGFUSE_SECRET_KEY</code>, <code class="text-slate-300 font-mono">LANGFUSE_HOST</code>.<br>
+            3. Dùng <code class="text-amber-300 font-mono">CallbackHandler</code> của Langfuse truyền vào lệnh gọi của LangChain để ghi nhận trace toàn bộ chuỗi tool call.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Ưu tiên: Rất cao</span>
+        </div>
+
+        <!-- Task 2 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center font-mono text-sm">
+            02
+          </div>
+          <h4 class="font-bold text-white text-base">Tạo CI/CD Pipeline (Cho Person 5)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Tạo file <code class="text-amber-300 font-mono">.github/workflows/ci.yml</code>.<br>
+            2. Chạy tự động: Setup Python 3.12 -> Cài đặt thư viện -> Chạy lệnh kiểm thử <code class="text-slate-300 font-mono">pytest</code>.<br>
+            3. Kiểm tra build Docker cho cả Backend và Frontend để đảm bảo không bị lỗi build khi nộp bài.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Ưu tiên: Rất cao</span>
+        </div>
+
+        <!-- Task 3 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center font-mono text-sm">
+            03
+          </div>
+          <h4 class="font-bold text-white text-base">Popup Xác Nhận & Survey (Cho Person 1)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Tạo Modal <code class="text-amber-300 font-mono">OrderConfirmModal.jsx</code>: Khi ấn "Xác nhận đơn", bung popup hiển thị Tên, SĐT, Địa chỉ giao hàng để người dùng xác nhận hoặc sửa lại trước khi API chốt đơn.<br>
+            2. Thêm button "Khảo sát nhanh" mở modal chọn nhanh khẩu vị.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Ưu tiên: Cao</span>
+        </div>
+
+        <!-- Task 4 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center font-mono text-sm">
+            04
+          </div>
+          <h4 class="font-bold text-white text-base">Bổ Sung RAG & AI Bóc Tách (Cho Person 3)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Bổ sung extension <code class="text-amber-300 font-mono">pgvector</code> hoặc FAISS để lưu embeddings mô tả đồ uống, tìm kiếm RAG theo ngữ nghĩa mượt mà.<br>
+            2. Thêm Tool <code class="text-amber-300 font-mono">extract_delivery_info</code> để LLM tự động trích xuất Name, Phone, Address nếu người dùng nhắn trong chat.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Ưu tiên: Trung bình</span>
+        </div>
+
+        <!-- Task 5 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 font-bold flex items-center justify-center font-mono text-sm">
+            05
+          </div>
+          <h4 class="font-bold text-white text-base">Bộ Test Đánh Giá AI Eval (Cho Person 4)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Tạo file dữ liệu test mẫu gồm 20 kịch bản câu hỏi phức tạp (câu hỏi lừa dị ứng, hỏi đồ uống không có trong menu, hỏi đổi địa chỉ).<br>
+            2. Chạy kịch bản tự động chấm điểm độ an toàn dị ứng đạt 100% và độ chính xác gọi món.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Ưu tiên: Trung bình</span>
+        </div>
+
+        <!-- Task 6 -->
+        <div class="glass-card rounded-2xl p-6 border-slate-800 space-y-3">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center font-mono text-sm">
+            06
+          </div>
+          <h4 class="font-bold text-white text-base">Hoàn Thiện Tài Liệu Dự Án (Cho Person 5)</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            1. Viết tài liệu báo cáo kỹ thuật hoàn chỉnh gồm Kiến trúc C4, Sequence diagram.<br>
+            2. Bổ sung hướng dẫn kết nối Langfuse Dashboard và báo cáo kết quả kiểm thử QA test plan.
+          </p>
+          <span class="inline-block text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Ưu tiên: Hoàn tất</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/80 pt-8 pb-12 text-center text-xs text-slate-500 space-y-2">
+      <p>Báo Cáo Đánh Giá & Rà Soát Tiến Độ Dự Án DrinkBot MLOps • Được tạo tự động bởi AI Assistant</p>
+      <p class="font-mono text-slate-600">Thư mục dự án: d:\TMA-courses\Mlops\mlops_coffee</p>
+    </footer>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#020617',
+        primaryColor: '#d97706',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#b45309',
+        lineColor: '#94a3b8',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a',
+        fontSize: '15px',
+        fontFamily: '"Plus Jakarta Sans", sans-serif'
+      },
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: false,
+        showSequenceNumbers: true,
+        actorFontSize: 16,
+        actorFontFamily: '"Plus Jakarta Sans", sans-serif',
+        noteFontSize: 14,
+        messageFontSize: 14
+      }
+    });
+
+    // Hàm điều khiển Phóng to / Thu nhỏ Sơ đồ
+    function zoomMermaid(diagramId, delta) {
+      const el = document.getElementById(diagramId);
+      const badge = document.getElementById('badge-' + diagramId);
+      if (!el) return;
+
+      let currentScale = parseFloat(el.getAttribute('data-scale') || '1.0');
+      if (delta === 0) {
+        currentScale = 1.0;
+      } else {
+        currentScale = Math.min(Math.max(currentScale + delta, 0.6), 2.5);
+      }
+      
+      el.setAttribute('data-scale', currentScale);
+      el.style.transform = `scale(${currentScale})`;
+      el.style.transformOrigin = 'top center';
+      
+      if (badge) {
+        badge.innerText = Math.round(currentScale * 100) + '%';
+      }
+    }
+  </script>
+</body>
+</html>

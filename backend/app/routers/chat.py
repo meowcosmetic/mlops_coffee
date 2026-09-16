@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -141,4 +141,28 @@ async def history(user: User = Depends(get_current_user), db: AsyncSession = Dep
         .order_by(ChatMessage.created_at, ChatMessage.id)
     )
     return list(messages)
+
+
+@router.delete("/history")
+async def clear_history(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Delete all chat messages for current user, cancel pending orders, and seed a fresh welcome message."""
+    await db.execute(delete(ChatMessage).where(ChatMessage.user_id == user.id))
+
+    # Cancel any pending orders so user starts with a clean slate
+    pending_orders = await db.scalars(
+        select(Order).where(Order.user_id == user.id, Order.status == "pending")
+    )
+    for o in pending_orders:
+        o.status = "cancelled"
+
+    welcome_content = agent.WELCOME_MESSAGE.format(name=user.name)
+    welcome = ChatMessage(user_id=user.id, role="assistant", content=welcome_content)
+    db.add(welcome)
+    await db.commit()
+
+    return {
+        "status": "cleared",
+        "welcome_message": welcome_content,
+        "message": "Đã làm mới cuộc hội thoại thành công.",
+    }
 

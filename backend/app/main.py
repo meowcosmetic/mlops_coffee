@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.llm_versions import current_version
-from app.routers import auth, chat, menu, users
+from app.routers import auth, chat, menu, users, telemetry
 
 app = FastAPI(
     title="chatBotDrinkRecommendation",
@@ -24,6 +24,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(menu.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(telemetry.router, prefix="/api")
+
 
 
 @app.get("/api/health", tags=["health"])

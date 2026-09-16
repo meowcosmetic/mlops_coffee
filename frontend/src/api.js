@@ -42,6 +42,7 @@ export const api = {
   me: () => request('/users/me'),
   chat: (message) => request('/chat', { method: 'POST', body: { message } }),
   history: () => request('/chat/history'),
+  clearHistory: () => request('/chat/history', { method: 'DELETE' }),
   pendingOrders: () => request('/chat/orders/pending'),
   confirmOrder: (id, confirmed) =>
     request(`/chat/orders/${id}/confirm`, { method: 'POST', body: { confirmed } }),
@@ -51,4 +52,9 @@ export const api = {
   favorites: () => request('/users/me/favorites'),
   addFavorite: (id) => request(`/users/me/favorites/${id}`, { method: 'POST' }),
   removeFavorite: (id) => request(`/users/me/favorites/${id}`, { method: 'DELETE' }),
+  traces: (limit = 20) => request(`/telemetry/traces?limit=${limit}`),
+  clearTraces: () => request('/telemetry/traces/clear', { method: 'POST' }),
+  prompts: () => request('/telemetry/prompts'),
+  activatePrompt: (version) => request('/telemetry/prompts/activate', { method: 'POST', body: { version } }),
+  createPrompt: (payload) => request('/telemetry/prompts', { method: 'POST', body: payload }),
 }

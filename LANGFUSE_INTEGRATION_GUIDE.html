@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tài Liệu Hướng Dẫn Tích Hợp Langfuse - DrinkBot MLOps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      background-color: #0c0f17;
+      color: #e2e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .glass-card {
+      background: rgba(18, 24, 38, 0.8);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card:hover {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #f59e0b 0%, #fb923c 50%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    pre code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mermaid-box {
+      background: rgba(2, 6, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .mermaid svg {
+      max-width: none !important;
+      min-width: 850px;
+    }
+    .mermaid svg text {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-size: 14px !important;
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen selection:bg-amber-500 selection:text-black">
+
+  <!-- TOP NAV -->
+  <nav class="sticky top-0 z-50 backdrop-blur-xl bg-[#0c0f17]/90 border-b border-slate-800 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            Langfuse MLOps Guide <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono">Person 4</span>
+          </h1>
+          <p class="text-xs text-slate-400">Tài liệu kiến trúc, cách tích hợp & cơ chế hoạt động trong dự án DrinkBot</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <a href="http://localhost:3000" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition">
+          🍹 Mở Chat UI
+        </a>
+        <a href="http://localhost:8000/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          Swagger API ↗
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+    <!-- HERO / BANNER -->
+    <header class="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="space-y-4 max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+          <span>⚡ LLM Observability & MLOps</span>
+        </div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Langfuse Là Gì & Được Ứng Dụng Ra Sao Trong <span class="gradient-text">DrinkBot MLOps</span>?
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+          <strong>Langfuse</strong> là chuẩn công nghiệp về LLM Observability. Trong đồ án này, chúng ta triển khai theo kiến trúc <strong>100% Chạy Local & Tự Trị (Self-Contained In-Memory Telemetry)</strong>: 
+          Tất cả số liệu token, độ trễ ms, chi phí USD và chuỗi gọi Tools được hệ thống nội bộ ghi nhận và hiển thị ngay trên <strong>Sidebar Dashboard tích hợp trong giao diện Chat</strong> mà không cần mở tài khoản hay gửi dữ liệu ra bất kỳ dịch vụ bên thứ ba nào!
+        </p>
+      </div>
+    </header>
+
+    <!-- GIẢI THÍCH LOCAL MODE VS CLOUD MODE -->
+    <section class="glass-card rounded-2xl p-6 border-amber-500/30 space-y-3 bg-amber-500/5">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏠</span>
+        <h3 class="text-base font-bold text-white">Tại sao hiển thị Log trực tiếp trên Sidebar mà không cần Langfuse Cloud?</h3>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+        • <strong>Chạy hoàn toàn Local (Offline-Ready):</strong> Trực quan hóa dữ liệu qua Sidebar giúp sinh viên, giảng viên và tester có thể quan sát hành vi của AI, lượng token tiêu thụ và các tool call ngay khi đang chat trên máy tính mà không cần Internet.<br>
+        • <strong>Khi nào cần mở Langfuse Cloud?</strong> Trong môi trường doanh nghiệp quy mô lớn với hàng nghìn người dùng, bạn có thể điền Public/Secret Key từ Langfuse Cloud vào file <code class="text-amber-300 font-mono">.env</code> để đồng bộ dữ liệu tập trung lên web server của họ. Còn đối với đồ án và kiểm thử, <strong>toàn bộ đã được gói gọn hoàn chỉnh trong ứng dụng local của bạn</strong>!
+      </p>
+    </section>
+
+    <!-- 4 CỘT TRỤ GIÁ TRỊ CỦA LANGFUSE -->
+    <section class="space-y-6">
+      <h3 class="text-xl font-bold text-white flex items-center gap-2">
+        <span>🏛️ 4 Cột Trụ Cốt Lõi Langfuse Mang Lại Cho Dự Án</span>
+      </h3>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Card 1 -->
+        <div class="glass-card rounded-2xl p-5 space-y-2.5">
+          <div class="text-2xl">🔍</div>
+          <h4 class="font-bold text-white text-sm">1. Nested Tracing</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Quan sát toàn bộ chuỗi mắt xích lồng nhau: từ câu hỏi người dùng &rarr; Agent suy nghĩ &rarr; Tool <code class="text-amber-300 font-mono">recommend_drink</code> lọc SQL &rarr; trả lời khách.
+          </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="glass-card rounded-2xl p-5 space-y-2.5">
+          <div class="text-2xl">💰</div>
+          <h4 class="font-bold text-white text-sm">2. Token & Cost Tracking</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Tự động bóc tách Prompt Tokens, Completion Tokens và tính toán chi phí USD tức thì theo giá model (<code class="text-amber-300 font-mono">ag/gemini-3.8-flash-low</code>).
+          </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="glass-card rounded-2xl p-5 space-y-2.5">
+          <div class="text-2xl">⏱️</div>
+          <h4 class="font-bold text-white text-sm">3. Latency Profiling</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Đo đạc chính xác thời gian thực thi (Latency ms) của từng vòng lặp LLM invocation để phát hiện các bottleneck hoặc trường hợp loop quá lâu.
+          </p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="glass-card rounded-2xl p-5 space-y-2.5">
+          <div class="text-2xl">🏷️</div>
+          <h4 class="font-bold text-white text-sm">4. Version & Metadata</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Gắn nhãn phiên bản Prompt, ID người dùng và trạng thái gọi Tool, giúp đối chiếu chất lượng giữa các phiên bản Prompt mà không lo mất dấu.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SƠ ĐỒ LUỒNG DỮ LIỆU LANGFUSE TRONG DỰ ÁN -->
+    <section class="space-y-4">
+      <h3 class="text-xl font-bold text-white flex items-center gap-2">
+        <span>🔄 Sơ Đồ Luồng Dữ Liệu: Chat UI &rarr; Agent &rarr; Langfuse Inspector</span>
+      </h3>
+      <div class="mermaid-box">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 Người Dùng
+    participant UI as 🖥️ Chat Page (React)
+    participant Sidebar as ⚡ Langfuse Sidebar
+    participant API as 🚀 FastAPI (/api/chat)
+    participant Agent as 🤖 Agent Loop (LangChain)
+    participant Gateway as 🧠 Gemini Gateway (:20128)
+    participant LF as 📊 Langfuse Service
+
+    User->>UI: Nhập câu chat (VD: "Gợi ý trà đào")
+    UI->>API: POST /api/chat { message }
+    API->>Agent: run_chat_turn(...)
+    
+    rect rgb(25, 35, 50)
+        Note over Agent,Gateway: Quá trình AI suy nghĩ & gọi Tool
+        Agent->>Gateway: POST /v1/chat/completions
+        Gateway-->>Agent: Trả về Tool Call (recommend_drink) + Tokens
+        Agent->>Agent: Lọc dị ứng bằng code Python
+        Agent->>Gateway: Phản hồi kết quả Tool
+        Gateway-->>Agent: Câu tư vấn hoàn chỉnh
+    end
+
+    Agent->>LF: record_trace(trace_id, tokens, cost, latency, tools)
+    Agent-->>API: AgentResult
+    API-->>UI: ChatResponse (Tin nhắn bot hiển thị)
+    
+    rect rgb(35, 25, 45)
+        Note over UI,Sidebar: Cập nhật Sidebar thời gian thực
+        UI->>Sidebar: Trigger Refresh
+        Sidebar->>API: GET /api/telemetry/traces
+        API-->>Sidebar: Trả về danh sách 25 Trace gần nhất
+        Sidebar-->>User: Hiển thị Latency, In/Out Token & USD Cost!
+    end
+        </div>
+      </div>
+    </section>
+
+    <!-- CÁCH CHÚNG TA ĐÃ TÍCH HỢP TRONG CODE -->
+    <section class="space-y-6">
+      <h3 class="text-xl font-bold text-white flex items-center gap-2">
+        <span>💻 Chi Tiết Triển Khai Kỹ Thuật (Code Implementation)</span>
+      </h3>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+        
+        <!-- Code 1: Backend Service -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold border-b border-slate-800 pb-2">
+            <span class="text-amber-400">1. Backend: app/services/langfuse_service.py</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">Python 3.12</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">
+            Quản lý SDK Langfuse, CallbackHandler cho LangChain, và hàng đợi in-memory 50 log trace gần nhất:
+          </p>
+          <pre class="bg-slate-950 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code># Khởi tạo client Langfuse
+client = Langfuse(
+    public_key=settings.langfuse_public_key,
+    secret_key=settings.langfuse_secret_key,
+    host=settings.langfuse_host
+)
+
+# Ghi nhận log trace cho mỗi lượt chat
+def record_trace(trace_id, user_id, model, latency_ms, 
+                 input_tokens, output_tokens, cost_usd, tools_called):
+    record = LangfuseTraceRecord(...)
+    _RECENT_LOGS.appendleft(record) # Cung cấp cho UI Sidebar</code></pre>
+        </div>
+
+        <!-- Code 2: Agent Integration -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold border-b border-slate-800 pb-2">
+            <span class="text-amber-400">2. Agent Turn Hook: app/services/agent.py</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">Agent Loop</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">
+            Đo đạc độ trễ, lưu vết đầy đủ câu hỏi, phản hồi AI và toàn bộ tham số + kết quả của Tool Calling:
+          </p>
+          <pre class="bg-slate-950 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code># Khởi tạo trace_id và danh sách tool execution
+turn_start_time = time.perf_counter()
+trace_id = f"trace-{uuid.uuid4().hex[:12]}"
+tools_called_list = []
+tool_calls_detail = []
+
+# Vòng lặp tool calling
+for call in tool_calls:
+    tools_called_list.append(call.get("name"))
+    result, extra = await _dispatch(db, user, prefs, call)
+    # Lưu đầy đủ arguments từ LLM và kết quả thực thi của backend:
+    tool_calls_detail.append({
+        "tool": call.get("name"),
+        "args": call.get("args"),
+        "result": result
+    })
+
+# Kết thúc turn: ghi nhận đầy đủ prompt, full response & tool calls detail
+langfuse_service.record_trace(
+    trace_id=trace_id,
+    input_text=message,       # Không cắt ngắn
+    output_text=reply,        # Toàn bộ phản hồi của AI
+    tools_called=tools_called_list,
+    tool_calls_detail=tool_calls_detail,
+    ...
+)</code></pre>
+        </div>
+
+        <!-- Code 3: Telemetry Router -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold border-b border-slate-800 pb-2">
+            <span class="text-amber-400">3. API Endpoint: app/routers/telemetry.py</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">FastAPI</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">
+            Cung cấp REST endpoint cấp dữ liệu Trace, Full Response & Tool Execution cho Sidebar:
+          </p>
+          <pre class="bg-slate-950 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code>@router.get("/telemetry/traces")
+async def get_traces(limit: int = 30):
+    return {
+        "langfuse_enabled": True,
+        "traces": langfuse_service.get_recent_traces(limit)
+    }
+
+@router.post("/telemetry/traces/clear")
+async def clear_traces():
+    langfuse_service.clear_traces()
+    return {"status": "cleared"}</code></pre>
+        </div>
+
+        <!-- Code 4: Frontend Sidebar Component -->
+        <div class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between text-slate-300 font-mono font-bold border-b border-slate-800 pb-2">
+            <span class="text-amber-400">4. Frontend: LangfuseSidebar.jsx</span>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">React 18</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">
+            Sidebar co giãn đồng bộ giao diện, hiển thị trọn vẹn AI Response, tham số đầu vào và kết quả trả về của Tool Call dưới dạng JSON format:
+          </p>
+          <pre class="bg-slate-950 p-4 rounded-xl text-slate-300 font-mono overflow-x-auto border border-slate-800"><code>// Mở rộng chi tiết từng lượt chat:
+- Toàn bộ nội dung Prompt của User & Phản hồi AI (kèm nút Copy)
+- Hộp thoại JSON: Tham số truyền vào (Arguments từ LLM)
+- Hộp thoại JSON: Kết quả thực thi trả về (System / DB Return)
+- Nút Sao chép toàn bộ Trace JSON phục vụ báo cáo / debug</code></pre>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HƯỚNG DẪN TRẢI NGHIỆM TRÊN GIAO DIỆN -->
+    <section class="glass-card rounded-2xl p-6 sm:p-8 border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <span>🚀 Cách Kiểm Tra Tính Năng Trực Tiếp Trên Trình Duyệt</span>
+      </h3>
+      <ol class="space-y-3 text-xs sm:text-sm text-slate-300 list-decimal list-inside leading-relaxed">
+        <li>
+          Mở ứng dụng chat tại: <a href="http://localhost:3000" target="_blank" class="text-amber-400 font-bold hover:underline">http://localhost:3000</a>.
+        </li>
+        <li>
+          Đăng nhập vào tài khoản của bạn (hoặc tạo tài khoản mới).
+        </li>
+        <li>
+          Ở góc trên thanh Header, bạn sẽ thấy nút: <span class="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-amber-400 font-semibold font-mono text-xs">⚡ Langfuse Traces</span>.
+        </li>
+        <li>
+          Gửi một tin nhắn bất kỳ (Ví dụ: <em>"Gợi ý cho mình món cà phê nào ít đường không sữa với"</em>).
+        </li>
+        <li>
+          Bấm vào nút <strong>⚡ Langfuse Traces</strong>: Sidebar sẽ trượt ra từ bên phải màn hình, hiển thị đầy đủ:
+          <ul class="list-disc list-inside pl-4 pt-1 text-slate-400 text-xs space-y-1">
+            <li><strong>Trace ID</strong> độc nhất cho lượt chat.</li>
+            <li><strong>Thời gian phản hồi (Latency)</strong> chính xác tính bằng millisecond.</li>
+            <li><strong>Số lượng Token</strong> (Input Tokens và Output Tokens).</li>
+            <li><strong>Chi phí USD quy đổi</strong>.</li>
+            <li><strong>Danh sách Tool đã gọi</strong> (<code class="text-indigo-300 font-mono">update_profile</code>, <code class="text-indigo-300 font-mono">recommend_drink</code>, <code class="text-indigo-300 font-mono">order</code>).</li>
+            <li>Click vào từng card trace để bung xem câu trả lời chi tiết và Model name!</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800 pt-8 pb-12 text-center text-xs text-slate-500 space-y-2">
+      <p>Tài Liệu Hướng Dẫn Kỹ Thuật Langfuse MLOps • Được tạo tự động cho dự án DrinkBot</p>
+      <p class="font-mono text-slate-600">Thư mục dự án: d:\TMA-courses\Mlops\mlops_coffee</p>
+    </footer>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#020617',
+        primaryColor: '#d97706',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#b45309',
+        lineColor: '#94a3b8',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a',
+        fontSize: '14px',
+        fontFamily: '"Plus Jakarta Sans", sans-serif'
+      }
+    });
+  </script>
+</body>
+</html>

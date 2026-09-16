@@ -14,8 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import MenuItem, Order, OrderItem, User, UserPreference
-from app.llm_versions import SYSTEM_PROMPT_TEMPLATE
+from app.llm_versions import SYSTEM_PROMPT_TEMPLATE, SYSTEM_PROMPT_VERSION, current_version
 from app.services import llm, recommendation
+from app.services import langfuse_service, prompt_service
+import time
+import uuid
 
 MAX_TOOL_ITERATIONS = 4
 
@@ -126,17 +129,17 @@ class AgentResult:
     estimated_cost_usd: float | None = None
 
 
-def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, str]], message: str) -> list:
-    system = SystemMessage(
-        content=SYSTEM_PROMPT_TEMPLATE.format(
-            name=user.name, profile_json=json.dumps(recommendation.profile_dict(prefs))
-        )
+def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, str]], message: str, prompt_template: str | None = None) -> tuple[list, str]:
+    tpl = prompt_template or SYSTEM_PROMPT_TEMPLATE
+    system_text = tpl.format(
+        name=user.name, profile_json=json.dumps(recommendation.profile_dict(prefs))
     )
+    system = SystemMessage(content=system_text)
     messages: list = [system]
     for role, content in history:
         messages.append(HumanMessage(content=content) if role == "user" else AIMessage(content=content))
     messages.append(HumanMessage(content=message))
-    return messages
+    return messages, system_text
 
 
 def _exec_update_profile(prefs: UserPreference, args: dict) -> dict:
@@ -254,13 +257,46 @@ async def run_chat_turn(
 ) -> AgentResult:
     """Run one turn of the tool-calling agent loop and return the final reply plus any
     structured recommendations/pending order produced along the way."""
+    turn_start_time = time.perf_counter()
+    trace_id = f"trace-{uuid.uuid4().hex[:12]}"
+    tools_called_list: list[str] = []
+    tool_calls_detail: list[dict] = []
+
+    active_prompt = prompt_service.get_active_prompt()
     model = llm.get_chat_model().bind_tools(TOOL_SCHEMAS)
-    messages = _build_messages(user, prefs, history, message)
+    messages, system_prompt_text = _build_messages(user, prefs, history, message, active_prompt.template)
     recommendations: list[dict] = []
     pending_order: dict | None = None
     usage = llm.LLMUsage()
 
-    def result_with_usage(reply: str) -> AgentResult:
+    def result_with_usage(reply: str, success: bool = True, error: str | None = None) -> AgentResult:
+        latency_ms = (time.perf_counter() - turn_start_time) * 1000
+        
+        # Ghi nhận log trace cho Langfuse & Sidebar
+        try:
+            langfuse_service.record_trace(
+                trace_id=trace_id,
+                user_id=user.id,
+                model=settings.openai_model,
+                prompt_name=active_prompt.name,
+                prompt_version=active_prompt.version,
+                prompt_hash=active_prompt.prompt_hash,
+                system_prompt=system_prompt_text,
+                input_text=message,
+                output_text=reply,
+                latency_ms=latency_ms,
+                input_tokens=usage.input_tokens or 0,
+                output_tokens=usage.output_tokens or 0,
+                total_tokens=usage.total_tokens or 0,
+                cost_usd=usage.estimated_cost_usd or 0.0,
+                tools_called=tools_called_list,
+                tool_calls_detail=tool_calls_detail,
+                success=success,
+                error=error,
+            )
+        except Exception as log_err:
+            print("Langfuse trace record warning:", log_err)
+
         return AgentResult(
             reply,
             recommendations,
@@ -289,7 +325,7 @@ async def run_chat_turn(
             invocation = await to_thread.run_sync(llm.invoke, model, messages)
         except Exception as exc:
             print("Error invoking model:", exc)
-            return result_with_usage(FALLBACK_ERROR_REPLY)
+            return result_with_usage(FALLBACK_ERROR_REPLY, success=False, error=str(exc))
 
         ai_msg = invocation.response
         usage = llm.LLMUsage(
@@ -303,14 +339,25 @@ async def run_chat_turn(
         tool_calls = getattr(ai_msg, "tool_calls", None) or []
         if not tool_calls:
             reply = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
-            return result_with_usage(reply or FALLBACK_EMPTY_REPLY)
+            return result_with_usage(reply or FALLBACK_EMPTY_REPLY, success=True)
 
         for call in tool_calls:
+            tool_name = call.get("name")
+            tool_args = call.get("args") or {}
+            if tool_name and tool_name not in tools_called_list:
+                tools_called_list.append(tool_name)
+
             result, extra = await _dispatch(db, user, prefs, call)
-            if call.get("name") == TOOL_RECOMMEND_DRINK and isinstance(extra, list):
+            tool_calls_detail.append({
+                "tool": tool_name,
+                "args": tool_args,
+                "result": result,
+            })
+            if tool_name == TOOL_RECOMMEND_DRINK and isinstance(extra, list):
                 recommendations = extra
-            elif call.get("name") == TOOL_ORDER and extra is not None:
+            elif tool_name == TOOL_ORDER and extra is not None:
                 pending_order = extra
             messages.append(ToolMessage(content=json.dumps(result, default=str), tool_call_id=call.get("id")))
 
-    return result_with_usage(FALLBACK_LOOP_REPLY)
+    return result_with_usage(FALLBACK_LOOP_REPLY, success=False, error="Max tool iterations reached")
+

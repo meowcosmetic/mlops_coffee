@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     admin_api_key: str = ""  # empty = admin endpoints unprotected (MVP/dev)
 
+    # --- Langfuse Observability ---
+    langfuse_public_key: str = "pk-lf-drinkbot-dev"
+    langfuse_secret_key: str = "sk-lf-drinkbot-dev"
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_enabled: bool = True
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
     @property
