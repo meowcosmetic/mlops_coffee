@@ -12,10 +12,9 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models import MenuItem, Order, OrderItem, User, UserPreference
-from app.llm_versions import SYSTEM_PROMPT_TEMPLATE
-from app.services import llm, recommendation
+from app import llm_versions
+from app.services import llm, prompts, recommendation
 
 MAX_TOOL_ITERATIONS = 4
 
@@ -126,9 +125,10 @@ class AgentResult:
     estimated_cost_usd: float | None = None
 
 
-def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, str]], message: str) -> list:
+def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, str]], message: str,
+                    system_template: str) -> list:
     system = SystemMessage(
-        content=SYSTEM_PROMPT_TEMPLATE.format(
+        content=system_template.format(
             name=user.name, profile_json=json.dumps(recommendation.profile_dict(prefs))
         )
     )
@@ -254,8 +254,10 @@ async def run_chat_turn(
 ) -> AgentResult:
     """Run one turn of the tool-calling agent loop and return the final reply plus any
     structured recommendations/pending order produced along the way."""
+    prompt_row = await prompts.get_active_prompt(db)
+    version = llm_versions.build_version(prompt_row)
     model = llm.get_chat_model().bind_tools(TOOL_SCHEMAS)
-    messages = _build_messages(user, prefs, history, message)
+    messages = _build_messages(user, prefs, history, message, prompt_row.template)
     recommendations: list[dict] = []
     pending_order: dict | None = None
     usage = llm.LLMUsage()
@@ -265,7 +267,7 @@ async def run_chat_turn(
             reply,
             recommendations,
             pending_order,
-            settings.openai_model if any(value is not None for value in (
+            version.model if any(value is not None for value in (
                 usage.input_tokens,
                 usage.output_tokens,
                 usage.total_tokens,
@@ -286,7 +288,7 @@ async def run_chat_turn(
 
     for _ in range(MAX_TOOL_ITERATIONS):
         try:
-            invocation = await to_thread.run_sync(llm.invoke, model, messages)
+            invocation = await to_thread.run_sync(llm.invoke, model, messages, version)
         except Exception as exc:
             print("Error invoking model:", exc)
             return result_with_usage(FALLBACK_ERROR_REPLY)

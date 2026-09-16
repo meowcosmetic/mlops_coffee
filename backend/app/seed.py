@@ -7,7 +7,9 @@ import asyncio
 from sqlalchemy import select, func
 
 from app.database import SessionLocal
+from app.llm_versions import DEFAULT_SYSTEM_PROMPT_NAME, DEFAULT_SYSTEM_PROMPT_TEMPLATE, DEFAULT_SYSTEM_PROMPT_VERSION
 from app.models import MenuItem
+from app.services import prompts
 
 SAMPLE_DRINKS = [
     # --- Cafe (5) ---
@@ -150,15 +152,32 @@ SAMPLE_DRINKS = [
 ]
 
 
+async def seed_prompt(session) -> None:
+    try:
+        await prompts.get_active_prompt(session, name=DEFAULT_SYSTEM_PROMPT_NAME)
+        print("Active prompt already seeded, skipping.")
+    except LookupError:
+        await prompts.create_version(
+            session,
+            name=DEFAULT_SYSTEM_PROMPT_NAME,
+            template=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+            version=DEFAULT_SYSTEM_PROMPT_VERSION,
+            activate=True,
+        )
+        await session.commit()
+        print("Seeded initial prompt version.")
+
+
 async def seed() -> None:
     async with SessionLocal() as session:
         count = await session.scalar(select(func.count(MenuItem.id)))
         if count:
             print(f"Menu already seeded ({count} items), skipping.")
-            return
-        session.add_all(MenuItem(**drink) for drink in SAMPLE_DRINKS)
-        await session.commit()
-        print(f"Seeded {len(SAMPLE_DRINKS)} menu items.")
+        else:
+            session.add_all(MenuItem(**drink) for drink in SAMPLE_DRINKS)
+            await session.commit()
+            print(f"Seeded {len(SAMPLE_DRINKS)} menu items.")
+        await seed_prompt(session)
 
 
 if __name__ == "__main__":
