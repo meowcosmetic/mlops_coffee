@@ -9,18 +9,33 @@ function money(value) {
 
 function RecommendationCard({ rec, onFavorite }) {
   return (
-    <div className="bg-white border border-amber-200 rounded-xl p-3 mt-2 shadow-sm">
-      <div className="flex justify-between items-start">
-        <h3 className="font-semibold text-amber-800">{rec.name}</h3>
-        <span className="text-sm font-bold text-gray-700">${money(rec.price)}</span>
+    <div className="bg-white border border-amber-200 rounded-xl p-3 mt-2 shadow-sm relative overflow-hidden">
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-semibold text-amber-800">{rec.name}</h3>
+          {rec.match_score && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 text-[10px] font-bold">
+              🧠 RAG Match: {rec.match_score}%
+            </span>
+          )}
+        </div>
+        <span className="text-sm font-bold text-gray-700 whitespace-nowrap">${money(rec.price)}</span>
       </div>
-      <p className="text-sm text-gray-600">{rec.description}</p>
-      <p className="text-xs text-amber-700 mt-1 italic">Why: {rec.reason}</p>
+      <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
+      {rec.tasting_notes && (
+        <p className="text-xs text-slate-700 mt-1.5 bg-amber-50/70 p-2 rounded border border-amber-200/60 leading-relaxed">
+          <span className="font-semibold text-amber-900">🍵 Hương vị:</span> {rec.tasting_notes}
+        </p>
+      )}
+      <p className="text-xs text-amber-800 mt-1.5 italic">
+        💡 {rec.reason}
+      </p>
       <button
+        type="button"
         onClick={() => onFavorite(rec.name)}
-        className="text-xs text-amber-600 hover:text-amber-800 mt-1"
+        className="text-xs text-amber-600 hover:text-amber-800 mt-2 inline-flex items-center gap-1 font-medium"
       >
-        ♥ Save to favorites
+        ♥ Lưu món yêu thích
       </button>
     </div>
   )

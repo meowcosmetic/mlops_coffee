@@ -54,14 +54,14 @@ def _usage_metadata(input_tokens: int | None, output_tokens: int | None) -> dict
 def stub_agent_model(monkeypatch, responses: list[AIMessage]) -> FakeToolModel:
     """Patch the chat agent's underlying model with a scripted FakeToolModel."""
     fake = FakeToolModel(responses)
-    monkeypatch.setattr(llm, "get_chat_model", lambda: fake)
+    monkeypatch.setattr(llm, "get_chat_model", lambda *a, **kw: fake)
     return fake
 
 
 @pytest.fixture(autouse=True)
 def no_llm(monkeypatch):
     """Tests never hit a real LLM: default to a no-op fake chat model."""
-    monkeypatch.setattr(llm, "get_chat_model", lambda: FakeToolModel())
+    monkeypatch.setattr(llm, "get_chat_model", lambda *a, **kw: FakeToolModel())
 
 
 

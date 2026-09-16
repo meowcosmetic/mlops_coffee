@@ -57,4 +57,11 @@ export const api = {
   prompts: () => request('/telemetry/prompts'),
   activatePrompt: (version) => request('/telemetry/prompts/activate', { method: 'POST', body: { version } }),
   createPrompt: (payload) => request('/telemetry/prompts', { method: 'POST', body: payload }),
+  models: () => request('/telemetry/models'),
+  evalDataset: () => request('/telemetry/evals/dataset'),
+  addEvalItem: (payload) => request('/telemetry/evals/dataset/items', { method: 'POST', body: payload }),
+  deleteEvalItem: (id) => request(`/telemetry/evals/dataset/items/${id}`, { method: 'DELETE' }),
+  runBenchmark: (promptVersion, modelName) => request('/telemetry/evals/run', { method: 'POST', body: { prompt_version: promptVersion, model_name: modelName } }),
+  latestBenchmark: () => request('/telemetry/evals/latest'),
 }
+

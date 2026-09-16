@@ -17,6 +17,7 @@ from app.models import MenuItem, Order, OrderItem, User, UserPreference
 from app.llm_versions import SYSTEM_PROMPT_TEMPLATE, SYSTEM_PROMPT_VERSION, current_version
 from app.services import llm, recommendation
 from app.services import langfuse_service, prompt_service
+from app.services.rag_service import rag_service
 import time
 import uuid
 
@@ -161,7 +162,9 @@ def _exec_update_profile(prefs: UserPreference, args: dict) -> dict:
     return {"updated": applied}
 
 
-async def _exec_recommend_drink(db: AsyncSession, prefs: UserPreference) -> tuple[dict, list[dict]]:
+async def _exec_recommend_drink(
+    db: AsyncSession, prefs: UserPreference, query: str | None = None
+) -> tuple[dict, list[dict]]:
     items = list(await db.scalars(select(MenuItem)))
     candidates = recommendation.filter_candidates(items, prefs.allergies or [])
     if not candidates:
@@ -169,6 +172,15 @@ async def _exec_recommend_drink(db: AsyncSession, prefs: UserPreference) -> tupl
             {"candidates": [], "note": "No drinks on the current menu are safe for this customer's allergies."},
             [],
         )
+
+    # Use Semantic RAG search when query is provided, or fallback to preference scoring
+    if query and str(query).strip():
+        recommendations = rag_service.search_drinks(
+            query=str(query).strip(), safe_candidates=candidates, prefs=prefs, limit=3
+        )
+    else:
+        recommendations = recommendation.fallback_recommend(candidates, prefs, limit=3)
+
     tool_result = {
         "candidates": [
             {
@@ -179,9 +191,19 @@ async def _exec_recommend_drink(db: AsyncSession, prefs: UserPreference) -> tupl
                 "category": c.category,
             }
             for c in candidates
-        ]
+        ],
+        "semantic_matches": [
+            {
+                "name": r.get("name"),
+                "match_score": r.get("match_score"),
+                "tasting_notes": r.get("tasting_notes"),
+                "mood_occasion": r.get("mood_occasion"),
+                "reason": r.get("reason"),
+            }
+            for r in recommendations
+            if "match_score" in r
+        ],
     }
-    recommendations = recommendation.fallback_recommend(candidates, prefs, limit=3)
     return tool_result, recommendations
 
 
@@ -240,7 +262,9 @@ async def _dispatch(db: AsyncSession, user: User, prefs: UserPreference, call: d
     if name == TOOL_UPDATE_PROFILE:
         return _exec_update_profile(prefs, args), None
     if name == TOOL_RECOMMEND_DRINK:
-        result, recommendations = await _exec_recommend_drink(db, prefs)
+        result, recommendations = await _exec_recommend_drink(
+            db, prefs, query=args.get("query")
+        )
         return result, recommendations
     if name == TOOL_ORDER:
         result, order = await _exec_order(db, user, prefs, args)
@@ -254,6 +278,8 @@ async def run_chat_turn(
     prefs: UserPreference,
     history: list[tuple[str, str]],
     message: str,
+    prompt_version: str | None = None,
+    model_name: str | None = None,
 ) -> AgentResult:
     """Run one turn of the tool-calling agent loop and return the final reply plus any
     structured recommendations/pending order produced along the way."""
@@ -262,8 +288,17 @@ async def run_chat_turn(
     tools_called_list: list[str] = []
     tool_calls_detail: list[dict] = []
 
-    active_prompt = prompt_service.get_active_prompt()
-    model = llm.get_chat_model().bind_tools(TOOL_SCHEMAS)
+    active_prompt = (
+        prompt_service.get_prompt_by_version(prompt_version)
+        if prompt_version
+        else None
+    ) or prompt_service.get_active_prompt()
+    effective_model_name = model_name or settings.openai_model
+    try:
+        raw_model = llm.get_chat_model(model_name=effective_model_name)
+    except TypeError:
+        raw_model = llm.get_chat_model()
+    model = raw_model.bind_tools(TOOL_SCHEMAS)
     messages, system_prompt_text = _build_messages(user, prefs, history, message, active_prompt.template)
     recommendations: list[dict] = []
     pending_order: dict | None = None
@@ -277,7 +312,7 @@ async def run_chat_turn(
             langfuse_service.record_trace(
                 trace_id=trace_id,
                 user_id=user.id,
-                model=settings.openai_model,
+                model=effective_model_name,
                 prompt_name=active_prompt.name,
                 prompt_version=active_prompt.version,
                 prompt_hash=active_prompt.prompt_hash,
@@ -301,7 +336,7 @@ async def run_chat_turn(
             reply,
             recommendations,
             pending_order,
-            settings.openai_model if any(value is not None for value in (
+            effective_model_name if any(value is not None for value in (
                 usage.input_tokens,
                 usage.output_tokens,
                 usage.total_tokens,
@@ -312,6 +347,7 @@ async def run_chat_turn(
             usage.total_tokens,
             usage.estimated_cost_usd,
         )
+
 
     def add_usage(current: int | float | None, added: int | float | None):
         if current is None:

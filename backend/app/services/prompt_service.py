@@ -7,9 +7,11 @@ Supports:
 - Langfuse Prompt Registry synchronization when Langfuse is connected.
 """
 import logging
+import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from typing import Any
+
 
 from app.config import settings
 
@@ -119,12 +121,19 @@ def get_all_prompts() -> list[dict]:
     return [asdict(item) for item in _REGISTRY.values()]
 
 
+_LF_LAST_CHECK: float = 0.0
+_LF_CACHED_REMOTE_PROMPT: PromptVersionItem | None = None
+
+
 def get_active_prompt() -> PromptVersionItem:
     """Return currently active prompt. Attempts to check Langfuse Prompt Registry if online."""
+    global _LF_LAST_CHECK, _LF_CACHED_REMOTE_PROMPT
     _init_default_prompts()
 
-    # Try sync with Langfuse Prompt Registry if configured
-    if settings.langfuse_enabled:
+    # Try sync with Langfuse Prompt Registry if configured (check at most once every 5 mins)
+    now = time.time()
+    if settings.langfuse_enabled and (now - _LF_LAST_CHECK > 300):
+        _LF_LAST_CHECK = now
         try:
             from app.services.langfuse_service import get_langfuse
             client = get_langfuse()
@@ -132,7 +141,7 @@ def get_active_prompt() -> PromptVersionItem:
                 lf_prompt = client.get_prompt("drink-assistant-system", label="production")
                 if lf_prompt and hasattr(lf_prompt, "prompt"):
                     h = _hash_template(lf_prompt.prompt)
-                    return PromptVersionItem(
+                    _LF_CACHED_REMOTE_PROMPT = PromptVersionItem(
                         name="drink-assistant-system",
                         version=getattr(lf_prompt, "version", "langfuse-cloud"),
                         label="production",
@@ -144,13 +153,27 @@ def get_active_prompt() -> PromptVersionItem:
                     )
         except Exception as exc:
             logger.debug("Langfuse Prompt Registry fetch skipped (using local registry): %s", exc)
+            _LF_CACHED_REMOTE_PROMPT = None
+
+    if _LF_CACHED_REMOTE_PROMPT:
+        return _LF_CACHED_REMOTE_PROMPT
 
     for item in _REGISTRY.values():
         if item.is_active:
             return item
 
+
     # Fallback default
     return _REGISTRY.get("1.1.0", list(_REGISTRY.values())[0])
+
+
+def get_prompt_by_version(version: str | None) -> PromptVersionItem | None:
+    """Return a prompt version item by version string, or None if not found."""
+    if not version:
+        return None
+    _init_default_prompts()
+    return _REGISTRY.get(version)
+
 
 
 def activate_prompt_version(version: str) -> PromptVersionItem:

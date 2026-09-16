@@ -31,13 +31,14 @@ class LLMInvocation:
         return getattr(self.response, name)
 
 @lru_cache
-def get_chat_model() -> ChatOpenAI:
+def get_chat_model(model_name: str | None = None) -> ChatOpenAI:
     return ChatOpenAI(
-        model=settings.openai_model,
+        model=model_name or settings.openai_model,
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
         temperature=1,
     )
+
 
 
 def invoke(model, messages):
