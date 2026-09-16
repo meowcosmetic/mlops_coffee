@@ -156,11 +156,95 @@ async def run_eval_benchmark(payload: BenchmarkRunRequest, db: AsyncSession = De
     return {"status": "completed", "benchmark": asdict(summary)}
 
 
+# --- MODEL REGISTRY & RETRAINING PIPELINE ---
+
+class ModelActivateRequest(BaseModel):
+    model_key: str
+
+
+class SLMFinetuneRequest(BaseModel):
+    epochs: int = 3
+    batch_size: int = 4
+    learning_rate: float = 0.0002
+    r: int = 8
+    lora_alpha: int = 16
+
+
+class EmbeddingRetrainRequest(BaseModel):
+    epochs: int = 5
+    learning_rate: float = 0.001
+
+
+class NERParseRequest(BaseModel):
+    text: str
+
+
+@router.get("/models/registry")
+async def get_model_registry(model_type: str | None = None):
+    """List all registered models, checkpoints, and active runtime states."""
+    from app.services.model_registry_service import model_registry
+    models = model_registry.list_models(model_type=model_type)  # type: ignore
+    active_chat = model_registry.get_active_chat_model()
+    active_embed = model_registry.get_active_embedding_model()
+    return {
+        "models": models,
+        "active_chat_model": f"{active_chat.name}@{active_chat.version}",
+        "active_embedding_model": f"{active_embed.name}@{active_embed.version}",
+    }
+
+
+@router.post("/models/activate")
+async def activate_model(payload: ModelActivateRequest):
+    """Hot-swap the active chat model or embedding model at runtime without downtime."""
+    from app.services.model_registry_service import model_registry
+    try:
+        updated = model_registry.activate_model(payload.model_key)
+        return {"status": "activated", "model": updated}
+    except ValueError as err:
+        raise HTTPException(status_code=404, detail=str(err))
+
+
+@router.post("/models/retrain/slm")
+async def trigger_slm_finetune(payload: SLMFinetuneRequest):
+    """Trigger LoRA Fine-Tuning pipeline for google/gemma-2-2b-it -> drinkbot-slm-lora-v1.0."""
+    from dataclasses import asdict
+    from app.services.slm_finetune_service import slm_pipeline
+    metrics = slm_pipeline.run_training_pipeline(
+        epochs=payload.epochs,
+        batch_size=payload.batch_size,
+        learning_rate=payload.learning_rate,
+        r=payload.r,
+        lora_alpha=payload.lora_alpha,
+    )
+    return {"status": "completed", "metrics": asdict(metrics)}
+
+
+@router.post("/models/retrain/embeddings")
+async def trigger_embedding_retrain(payload: EmbeddingRetrainRequest):
+    """Trigger Domain Adaptation Retraining for MiniLM-L6-v2 RAG embeddings."""
+    from dataclasses import asdict
+    from app.services.embedding_retrain_service import embedding_pipeline
+    metrics = embedding_pipeline.train_adapter(
+        epochs=payload.epochs,
+        learning_rate=payload.learning_rate,
+    )
+    return {"status": "completed", "metrics": asdict(metrics)}
+
+
+@router.post("/retrain/ner/parse")
+async def parse_customer_intent_ner(payload: NERParseRequest):
+    """Extract Customer Name, Phone Number, Delivery Address, and Items from chat."""
+    from app.services.intent_ner_service import ner_service
+    entities = ner_service.extract(payload.text)
+    return {"status": "success", "extracted": entities.to_dict()}
+
+
 @router.get("/evals/latest")
 async def get_latest_eval():
     """Get the most recent benchmark run summary."""
     latest = eval_service.get_latest_benchmark()
     return {"benchmark": latest}
+
 
 
 

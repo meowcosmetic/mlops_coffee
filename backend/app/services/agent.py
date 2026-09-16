@@ -293,7 +293,18 @@ async def run_chat_turn(
         if prompt_version
         else None
     ) or prompt_service.get_active_prompt()
-    effective_model_name = model_name or settings.openai_model
+    if model_name:
+        effective_model_name = model_name
+    else:
+        try:
+            from app.services.model_registry_service import model_registry
+            active = model_registry.get_active_chat_model()
+            if active and active.name not in ("ag/gemini-3.8-flash-low", "gpt-4o-mini"):
+                effective_model_name = active.name
+            else:
+                effective_model_name = settings.openai_model
+        except Exception:
+            effective_model_name = settings.openai_model
     try:
         raw_model = llm.get_chat_model(model_name=effective_model_name)
     except TypeError:

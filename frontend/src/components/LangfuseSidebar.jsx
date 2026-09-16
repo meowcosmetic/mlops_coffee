@@ -35,6 +35,30 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
   const [customModelInput, setCustomModelInput] = useState('')
   const [useCustomModel, setUseCustomModel] = useState(false)
 
+  // Model Registry & Retrain State
+  const [modelsList, setModelsList] = useState([])
+  const [loadingModelsList, setLoadingModelsList] = useState(false)
+  const [activeChatModelKey, setActiveChatModelKey] = useState('')
+  const [activeEmbedModelKey, setActiveEmbedModelKey] = useState('')
+  const [activatingModelKey, setActivatingModelKey] = useState(null)
+
+  // SLM LoRA Fine-tune state (Gemma 2 2B Base)
+  const [isTrainingSLM, setIsTrainingSLM] = useState(false)
+  const [slmMetrics, setSlmMetrics] = useState(null)
+  const [slmEpochs, setSlmEpochs] = useState(3)
+  const [slmRank, setSlmRank] = useState(8)
+  const [slmAlpha, setSlmAlpha] = useState(16)
+
+  // RAG Embedding Retrain state
+  const [isTrainingEmbed, setIsTrainingEmbed] = useState(false)
+  const [embedMetrics, setEmbedMetrics] = useState(null)
+  const [embedEpochs, setEmbedEpochs] = useState(5)
+
+  // Intent NER test state
+  const [nerInputText, setNerInputText] = useState('Giao cho anh Nam số 0912345678 đến 45 Lê Duẩn 2 ly Bạc xỉu ít đường nhé')
+  const [nerResult, setNerResult] = useState(null)
+  const [isParsingNER, setIsParsingNER] = useState(false)
+
   // Add Test Case Modal state
   const [showAddModal, setShowAddModal] = useState(false)
   const [modalCategory, setModalCategory] = useState('menu_groundedness')
@@ -109,8 +133,88 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
       fetchDataset()
       fetchLatestBenchmark()
       fetchModels()
+      fetchModelRegistry()
     }
   }, [isOpen, onRefreshTrigger])
+
+  async function fetchModelRegistry() {
+    setLoadingModelsList(true)
+    try {
+      const data = await api.modelRegistry()
+      setModelsList(data.models || [])
+      setActiveChatModelKey(data.active_chat_model || '')
+      setActiveEmbedModelKey(data.active_embedding_model || '')
+    } catch (err) {
+      console.error('Failed to load model registry:', err)
+    } finally {
+      setLoadingModelsList(false)
+    }
+  }
+
+  async function handleActivateModel(modelKey) {
+    setActivatingModelKey(modelKey)
+    try {
+      await api.activateModel(modelKey)
+      await fetchModelRegistry()
+      setFeedbackMsg(`✓ Đã hot-swap model '${modelKey}' thành công!`)
+      setTimeout(() => setFeedbackMsg(null), 3500)
+    } catch (err) {
+      alert(`Lỗi kích hoạt model: ${err.message}`)
+    } finally {
+      setActivatingModelKey(null)
+    }
+  }
+
+  async function handleRunSLMFineTune() {
+    setIsTrainingSLM(true)
+    setSlmMetrics(null)
+    try {
+      const res = await api.retrainSLM({
+        epochs: Number(slmEpochs),
+        r: Number(slmRank),
+        lora_alpha: Number(slmAlpha),
+      })
+      setSlmMetrics(res.metrics)
+      await fetchModelRegistry()
+      setFeedbackMsg('✓ Huấn luyện LoRA thành công! Checkpoint drinkbot-slm-lora-v1.0 đã được cập nhật.')
+      setTimeout(() => setFeedbackMsg(null), 4000)
+    } catch (err) {
+      alert(`Lỗi huấn luyện SLM: ${err.message}`)
+    } finally {
+      setIsTrainingSLM(false)
+    }
+  }
+
+  async function handleRunEmbeddingRetrain() {
+    setIsTrainingEmbed(true)
+    setEmbedMetrics(null)
+    try {
+      const res = await api.retrainEmbeddings({
+        epochs: Number(embedEpochs),
+      })
+      setEmbedMetrics(res.metrics)
+      await fetchModelRegistry()
+      setFeedbackMsg('✓ Tái huấn luyện RAG Embedding thành công! Adapter đã được kích hoạt.')
+      setTimeout(() => setFeedbackMsg(null), 4000)
+    } catch (err) {
+      alert(`Lỗi tái huấn luyện Embeddings: ${err.message}`)
+    } finally {
+      setIsTrainingEmbed(false)
+    }
+  }
+
+  async function handleParseNER() {
+    if (!nerInputText.trim()) return
+    setIsParsingNER(true)
+    try {
+      const res = await api.parseNER(nerInputText)
+      setNerResult(res.extracted)
+    } catch (err) {
+      alert(`Lỗi bóc tách thực thể: ${err.message}`)
+    } finally {
+      setIsParsingNER(false)
+    }
+  }
 
   async function handleClear() {
     try {
@@ -315,6 +419,19 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
               : 'bg-gray-100 text-gray-700'
           }`}>
             {latestBenchmark ? `${latestBenchmark.overall_pass_rate}%` : `${datasetItems.length} tests`}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('models')}
+          className={`flex-1 py-2.5 px-2 flex items-center justify-center gap-1.5 transition border-b-2 ${
+            activeTab === 'models'
+              ? 'border-amber-600 text-amber-950 bg-white font-bold'
+              : 'border-transparent text-amber-800/80 hover:text-amber-900 hover:bg-amber-100/50'
+          }`}
+        >
+          <span>🤖</span> Models & Retrain
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-600 text-white font-bold">
+            Gemma 2B
           </span>
         </button>
       </div>
@@ -1229,6 +1346,314 @@ export default function LangfuseSidebar({ isOpen, onClose, onRefreshTrigger }) {
                   </div>
                 )
               })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: MODEL REGISTRY & RETRAINING */}
+      {activeTab === 'models' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-gradient-to-b from-white to-amber-50/20 text-left">
+          {/* HEADER INTRO */}
+          <div className="p-3 bg-gradient-to-r from-purple-50 via-amber-50 to-emerald-50 rounded-xl border border-purple-200 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                <span>🤖</span> Model Versioning & Dual Retraining Engine
+              </h3>
+              <p className="text-[11px] text-purple-800/80 mt-0.5">
+                Quản lý Foundation Models, Fine-Tuned SLM LoRA (Gemma 2 2B), và Domain RAG Embeddings.
+              </p>
+            </div>
+            <button
+              onClick={fetchModelRegistry}
+              disabled={loadingModelsList}
+              className="px-2.5 py-1 bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 rounded text-[11px] font-semibold transition"
+            >
+              {loadingModelsList ? 'Đang tải...' : '↻ Làm mới'}
+            </button>
+          </div>
+
+          {/* ACTIVE STATUS BANNER */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Active Chat Model</span>
+                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">Live Serving</span>
+              </div>
+              <div className="mt-1 font-mono font-bold text-amber-950 text-xs truncate">
+                {activeChatModelKey || 'ag/gemini-3.8-flash-low'}
+              </div>
+              <div className="mt-0.5 text-[10px] text-gray-500">
+                Được kích hoạt trực tiếp trong Agent Chat
+              </div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-[10px] font-medium uppercase tracking-wider">Active RAG Embedding</span>
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded">Projection Adapter</span>
+              </div>
+              <div className="mt-1 font-mono font-bold text-purple-950 text-xs truncate">
+                {activeEmbedModelKey || 'all-MiniLM-L6-v2'}
+              </div>
+              <div className="mt-0.5 text-[10px] text-gray-500">
+                Không gian vector ngữ nghĩa 384 chiều
+              </div>
+            </div>
+          </div>
+
+          {/* MODEL REGISTRY TABLE */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                <span>📦</span> Danh mục Model Versions (Langfuse Tracked)
+              </h4>
+              <span className="text-[10px] text-gray-500 font-mono">{modelsList.length} checkpoints</span>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs divide-y divide-gray-100">
+              {modelsList.map((m) => {
+                const key = `${m.name}@${m.version}`
+                const isActive = m.is_active_chat || m.is_active_embedding
+                const isActivating = activatingModelKey === key
+                return (
+                  <div key={key} className={`p-3 text-xs transition ${isActive ? 'bg-emerald-50/40' : 'hover:bg-gray-50'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-gray-950">{m.name}</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 border border-gray-200">
+                            {m.version}
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                            m.model_type === 'foundation' ? 'bg-blue-100 text-blue-800' :
+                            m.model_type === 'fine-tuned-slm' ? 'bg-purple-100 text-purple-800' :
+                            'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {m.model_type}
+                          </span>
+                          {isActive && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-600 text-white rounded font-bold">
+                              ✓ ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-gray-600 mt-1">
+                          {m.description}
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 font-mono flex items-center gap-2">
+                          <span>Base: <strong>{m.base_model}</strong></span>
+                          <span>•</span>
+                          <span>Hash: {m.sha256_hash}</span>
+                          {m.eval_pass_rate != null && (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-700 font-bold">Eval: {m.eval_pass_rate}%</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isActive ? (
+                          <span className="text-[10px] font-bold text-emerald-700 px-2 py-1 bg-emerald-100/80 rounded-md">
+                            Đang phục vụ
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleActivateModel(key)}
+                            disabled={isActivating}
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold transition shadow-xs disabled:opacity-50"
+                          >
+                            {isActivating ? 'Đang bật...' : '⚡ Hot-Swap'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* PIPELINE 1: SLM FINE-TUNING (GEMMA 2 2B) */}
+          <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                  <span>🚀</span> Pipeline 1: SLM LoRA Fine-Tuning (Gemma 2 2B Base)
+                </h4>
+                <p className="text-[11px] text-purple-900/80 mt-0.5">
+                  Huấn luyện checkpoint <strong>drinkbot-slm-lora-v1.0</strong> từ base <code>google/gemma-2-2b-it</code> với Gemma Chat Template & Eval Gate.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-purple-200 text-purple-900 rounded font-bold">
+                LoRA r=8, α=16
+              </span>
+            </div>
+
+            {/* HYPERPARAMS */}
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-white p-2 rounded-lg border border-purple-100">
+                <span className="text-[10px] text-gray-500 block">Epochs</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={slmEpochs}
+                  onChange={(e) => setSlmEpochs(e.target.value)}
+                  className="w-full font-mono text-xs font-bold text-purple-950 bg-transparent outline-none"
+                />
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-purple-100">
+                <span className="text-[10px] text-gray-500 block">Rank (r)</span>
+                <input
+                  type="number"
+                  value={slmRank}
+                  onChange={(e) => setSlmRank(e.target.value)}
+                  className="w-full font-mono text-xs font-bold text-purple-950 bg-transparent outline-none"
+                />
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-purple-100">
+                <span className="text-[10px] text-gray-500 block">LoRA Alpha</span>
+                <input
+                  type="number"
+                  value={slmAlpha}
+                  onChange={(e) => setSlmAlpha(e.target.value)}
+                  className="w-full font-mono text-xs font-bold text-purple-950 bg-transparent outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleRunSLMFineTune}
+              disabled={isTrainingSLM}
+              className="w-full py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isTrainingSLM ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Đang chạy Gemma 2B LoRA Gradient Descent & Eval Gate...
+                </>
+              ) : (
+                '▶ Bắt Đầu Pipeline Fine-Tune LoRA (drinkbot-slm-lora-v1.0)'
+              )}
+            </button>
+
+            {/* METRICS RESULT CARD */}
+            {slmMetrics && (
+              <div className="p-3 bg-white rounded-lg border border-purple-200 text-xs space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-between text-[11px] font-bold text-purple-950">
+                  <span>✓ Checkpoint Huấn Luyện Thành Công!</span>
+                  <span className="text-emerald-700 font-mono">Eval: {slmMetrics.eval_pass_rate}%</span>
+                </div>
+                <div className="text-[11px] text-gray-700 font-mono grid grid-cols-2 gap-1">
+                  <span>Initial Loss: <strong>{slmMetrics.initial_loss}</strong></span>
+                  <span>Final Loss: <strong className="text-emerald-600">{slmMetrics.final_loss}</strong></span>
+                  <span>Duration: {slmMetrics.duration_seconds}s</span>
+                  <span>Dataset: {slmMetrics.total_samples} traces</span>
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono truncate">
+                  Output: {slmMetrics.checkpoint_path}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PIPELINE 2: DOMAIN RAG EMBEDDING RETRAINING */}
+          <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                  <span>⚡</span> Pipeline 2: Domain RAG Embedding Retraining (384d)
+                </h4>
+                <p className="text-[11px] text-emerald-900/80 mt-0.5">
+                  Tái huấn luyện Adapter trên 35+ cặp từ lóng F&B Việt Nam (bạc xỉu, say cà phê, giải ngấy, đẹp da, keto...).
+                </p>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded font-bold">
+                Contrastive Loss
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="bg-white p-2 rounded-lg border border-emerald-100 flex-1">
+                <span className="text-[10px] text-gray-500 block">Số Epochs</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="15"
+                  value={embedEpochs}
+                  onChange={(e) => setEmbedEpochs(e.target.value)}
+                  className="w-full font-mono text-xs font-bold text-emerald-950 bg-transparent outline-none"
+                />
+              </div>
+              <button
+                onClick={handleRunEmbeddingRetrain}
+                disabled={isTrainingEmbed}
+                className="flex-2 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isTrainingEmbed ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Đang huấn luyện...
+                  </>
+                ) : (
+                  '⚡ Tái Huấn Luyện Adapter & Hot-Reload'
+                )}
+              </button>
+            </div>
+
+            {embedMetrics && (
+              <div className="p-3 bg-white rounded-lg border border-emerald-200 text-xs space-y-1 animate-fadeIn">
+                <div className="flex items-center justify-between font-bold text-emerald-950">
+                  <span>✓ Checkpoint drinkbot-embed-adapted-v1.0</span>
+                  <span className="text-emerald-600">+{embedMetrics.accuracy_improvement}% Độ chính xác</span>
+                </div>
+                <div className="text-[11px] text-gray-600 font-mono">
+                  Loss: {embedMetrics.initial_loss} → <strong className="text-emerald-700">{embedMetrics.final_loss}</strong> ({embedMetrics.duration_seconds}s)
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* TOOL 3: INTENT & NER EXTRACTION (LEVEL 3) */}
+          <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200 space-y-2.5">
+            <h4 className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+              <span>🎯</span> Intent & Entity Extraction (Tên, SĐT, Địa chỉ)
+            </h4>
+            <p className="text-[11px] text-amber-900/80">
+              Kiểm tra khả năng bóc tách thông tin giao hàng tự động trực tiếp từ câu chat của khách hàng:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nerInputText}
+                onChange={(e) => setNerInputText(e.target.value)}
+                placeholder="Nhập tin nhắn đặt hàng có địa chỉ..."
+                className="flex-1 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs text-gray-900 outline-none focus:ring-1 focus:ring-amber-500"
+              />
+              <button
+                onClick={handleParseNER}
+                disabled={isParsingNER}
+                className="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+              >
+                {isParsingNER ? 'Đang trích xuất...' : 'Bóc tách'}
+              </button>
+            </div>
+
+            {nerResult && (
+              <div className="p-2.5 bg-white rounded-lg border border-amber-200 text-xs space-y-1 animate-fadeIn font-mono">
+                <div className="text-[11px] font-bold text-amber-950">Kết quả bóc tách (Confidence: {nerResult.confidence * 100}%):</div>
+                <div className="text-gray-700">👤 Khách hàng: <strong className="text-amber-900">{nerResult.customer_name || 'N/A'}</strong></div>
+                <div className="text-gray-700">📞 SĐT: <strong className="text-emerald-700">{nerResult.phone_number || 'N/A'}</strong></div>
+                <div className="text-gray-700">📍 Địa chỉ: <strong className="text-indigo-700">{nerResult.shipping_address || 'N/A'}</strong></div>
+                {nerResult.items && nerResult.items.length > 0 && (
+                  <div className="text-gray-700">
+                    🥤 Món: {nerResult.items.map(it => `${it.quantity}x ${it.item}`).join(', ')}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
