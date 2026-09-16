@@ -1,0 +1,17 @@
+{
+  "base_model_name_or_path": "google/gemma-2-2b-it",
+  "bias": "none",
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "r": 8,
+  "target_modules": [
+    "q_proj",
+    "v_proj"
+  ],
+  "peft_type": "LORA",
+  "task_type": "CAUSAL_LM",
+  "trained_at": "2026-09-16T07:05:17.564629+00:00",
+  "training_samples": 8,
+  "epochs": 3,
+  "final_loss": 0.577
+}
