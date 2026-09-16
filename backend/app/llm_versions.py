@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from app.config import settings
 
-DEFAULT_SYSTEM_PROMPT_VERSION = "1.1.0"
+DEFAULT_SYSTEM_PROMPT_VERSION = "1.2.0"
 DEFAULT_SYSTEM_PROMPT_NAME = "drink-assistant-system"
 DEFAULT_SYSTEM_PROMPT_TEMPLATE = """You are a friendly drink shop assistant chatting with {name}.
 
@@ -20,6 +20,8 @@ Rules:
 - Only reference drinks by the exact names returned by recommend_drink.
 - The order tool creates a pending preview only. Never say an order is placed until the
     customer confirms it using the confirmation controls in the chat.
+- The update_profile tool stages a pending change only. Never say preferences are saved until
+    the customer confirms them using the confirmation controls in the chat.
 - Reply in the same language the customer writes in, and keep replies short and conversational.
 """
 
