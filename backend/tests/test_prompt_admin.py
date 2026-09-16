@@ -1,21 +1,21 @@
 async def test_create_and_list_prompt_versions(client):
     resp = await client.post("/api/prompts", json={
-        "name": "drink-assistant-system", "version": "1.2.0", "template": "New template {name}",
+        "name": "drink-assistant-system", "version": "1.3.0", "template": "New template {name}",
     })
     assert resp.status_code == 201, resp.text
     created = resp.json()
-    assert created["version"] == "1.2.0"
+    assert created["version"] == "1.3.0"
     assert created["is_active"] is False
 
     listing = await client.get("/api/prompts", params={"name": "drink-assistant-system"})
     assert listing.status_code == 200
     versions = {v["version"] for v in listing.json()}
-    assert {"1.1.0", "1.2.0"} <= versions
+    assert {"1.2.0", "1.3.0"} <= versions
 
 
 async def test_activate_prompt_version_switches_active_row(client):
     created = (await client.post("/api/prompts", json={
-        "name": "drink-assistant-system", "version": "1.2.0", "template": "New template {name}",
+        "name": "drink-assistant-system", "version": "1.3.0", "template": "New template {name}",
     })).json()
 
     activated = await client.post(f"/api/prompts/{created['id']}/activate")
@@ -24,4 +24,13 @@ async def test_activate_prompt_version_switches_active_row(client):
 
     listing = (await client.get("/api/prompts", params={"name": "drink-assistant-system"})).json()
     active_versions = [v["version"] for v in listing if v["is_active"]]
-    assert active_versions == ["1.2.0"]
+    assert active_versions == ["1.3.0"]
+
+
+async def test_create_duplicate_prompt_version_returns_409(client):
+    payload = {"name": "drink-assistant-system", "version": "1.4.0", "template": "New template {name}"}
+    first = await client.post("/api/prompts", json=payload)
+    assert first.status_code == 201, first.text
+
+    second = await client.post("/api/prompts", json=payload)
+    assert second.status_code == 409, second.text
