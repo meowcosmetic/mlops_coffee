@@ -4,6 +4,7 @@ import logging
 from langchain_core.messages import AIMessage
 
 from app.config import settings
+from app.llm_versions import LLMVersion
 from app.services import llm
 
 
@@ -22,14 +23,22 @@ class ModelWithUsage:
 
 
 def test_invoke_logs_versioned_usage_and_cost(caplog):
+    version = LLMVersion(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt_name="drink-assistant-system",
+        prompt_version="9.9.9",
+        prompt_hash="deadbeefcafe",
+    )
     with caplog.at_level(logging.INFO, logger=llm.__name__):
-        result = llm.invoke(ModelWithUsage(), [])
+        result = llm.invoke(ModelWithUsage(), [], version)
 
     assert result.content == "hello"
     event = json.loads(caplog.records[-1].message)
     assert event["event"] == "llm_invocation"
     assert event["success"] is True
-    assert event["prompt_version"] == "1.1.0"
+    assert event["prompt_version"] == "9.9.9"
+    assert event["prompt_hash"] == "deadbeefcafe"
     assert event["input_tokens"] == 100
     assert event["output_tokens"] == 25
     assert result.usage.input_tokens == 100

@@ -16,9 +16,9 @@ async def test_create_version_computes_hash_and_defaults_inactive(db_session):
 
 async def test_activate_version_deactivates_previous_active_row(db_session):
     first = await prompts.create_version(db_session, name="drink-assistant-system",
-                                          template="v1", version="1.0.0", activate=True)
+                                          template="v1", version="2.0.0", activate=True)
     second = await prompts.create_version(db_session, name="drink-assistant-system",
-                                           template="v2", version="1.1.0")
+                                           template="v2", version="2.1.0")
     await db_session.commit()
 
     await prompts.activate_version(db_session, second.id)
@@ -32,9 +32,9 @@ async def test_activate_version_deactivates_previous_active_row(db_session):
 
 async def test_get_active_prompt_returns_the_active_row(db_session):
     await prompts.create_version(db_session, name="drink-assistant-system",
-                                  template="inactive", version="1.0.0")
+                                  template="inactive", version="2.0.0")
     active = await prompts.create_version(db_session, name="drink-assistant-system",
-                                           template="active", version="1.1.0", activate=True)
+                                           template="active", version="2.1.0", activate=True)
     await db_session.commit()
 
     result = await prompts.get_active_prompt(db_session, name="drink-assistant-system")
