@@ -11,9 +11,17 @@ def compute_hash(template: str) -> str:
     return sha256(template.encode("utf-8")).hexdigest()[:12]
 
 
+def _validate_template(template: str) -> None:
+    try:
+        template.format(name="", profile_json="{}")
+    except Exception as exc:
+        raise ValueError(f"template failed to render: {exc}") from exc
+
+
 async def create_version(
     db: AsyncSession, *, name: str, template: str, version: str, activate: bool = False
 ) -> PromptVersion:
+    _validate_template(template)
     if activate:
         await db.execute(
             update(PromptVersion).where(PromptVersion.name == name).values(is_active=False)
@@ -34,6 +42,7 @@ async def activate_version(db: AsyncSession, version_id: int) -> PromptVersion:
     row = await db.get(PromptVersion, version_id)
     if row is None:
         raise LookupError(f"No prompt version with id {version_id}")
+    _validate_template(row.template)
     await db.execute(
         update(PromptVersion).where(PromptVersion.name == row.name).values(is_active=False)
     )
