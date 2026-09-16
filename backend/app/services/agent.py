@@ -12,7 +12,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import MenuItem, Order, OrderItem, User, UserPreference
+from app.models import MenuItem, Order, OrderItem, PendingPreferenceChange, User, UserPreference
 from app import llm_versions
 from app.services import llm, prompts, recommendation
 
@@ -118,6 +118,7 @@ class AgentResult:
     reply: str
     recommendations: list[dict] = field(default_factory=list)
     pending_order: dict | None = None
+    pending_preference_change: dict | None = None
     model_name: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -139,23 +140,19 @@ def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, 
     return messages
 
 
-def _exec_update_profile(prefs: UserPreference, args: dict) -> dict:
-    applied = {}
+def _compute_profile_changes(args: dict) -> dict:
+    changes = {}
     for field_name in _LIST_FIELDS:
         value = args.get(field_name)
         if isinstance(value, list) and all(isinstance(v, str) for v in value):
-            cleaned = [v.strip().lower() for v in value if v.strip()]
-            setattr(prefs, field_name, cleaned)
-            applied[field_name] = cleaned
+            changes[field_name] = [v.strip().lower() for v in value if v.strip()]
     temperature = args.get("temperature")
     if temperature in _TEMPERATURE_VALUES:
-        prefs.temperature = temperature
-        applied["temperature"] = temperature
+        changes["temperature"] = temperature
     caffeine = args.get("caffeine")
     if caffeine in _CAFFEINE_VALUES:
-        prefs.caffeine = caffeine
-        applied["caffeine"] = caffeine
-    return {"updated": applied}
+        changes["caffeine"] = caffeine
+    return changes
 
 
 async def _exec_recommend_drink(db: AsyncSession, prefs: UserPreference) -> tuple[dict, list[dict]]:
@@ -235,7 +232,14 @@ async def _dispatch(db: AsyncSession, user: User, prefs: UserPreference, call: d
     name = call.get("name")
     args = call.get("args") or {}
     if name == TOOL_UPDATE_PROFILE:
-        return _exec_update_profile(prefs, args), None
+        changes = _compute_profile_changes(args)
+        if not changes:
+            return {"updated": {}}, None
+        pending = PendingPreferenceChange(user_id=user.id, changes=changes, status="pending")
+        db.add(pending)
+        await db.flush()
+        pending_dict = {"id": pending.id, "changes": changes, "status": pending.status}
+        return {"pending_changes": changes}, pending_dict
     if name == TOOL_RECOMMEND_DRINK:
         result, recommendations = await _exec_recommend_drink(db, prefs)
         return result, recommendations
@@ -260,6 +264,7 @@ async def run_chat_turn(
     messages = _build_messages(user, prefs, history, message, prompt_row.template)
     recommendations: list[dict] = []
     pending_order: dict | None = None
+    pending_preference_change: dict | None = None
     usage = llm.LLMUsage()
 
     def result_with_usage(reply: str) -> AgentResult:
@@ -267,6 +272,7 @@ async def run_chat_turn(
             reply,
             recommendations,
             pending_order,
+            pending_preference_change,
             version.model if any(value is not None for value in (
                 usage.input_tokens,
                 usage.output_tokens,
@@ -313,6 +319,8 @@ async def run_chat_turn(
                 recommendations = extra
             elif call.get("name") == TOOL_ORDER and extra is not None:
                 pending_order = extra
+            elif call.get("name") == TOOL_UPDATE_PROFILE and extra is not None:
+                pending_preference_change = extra
             messages.append(ToolMessage(content=json.dumps(result, default=str), tool_call_id=call.get("id")))
 
     return result_with_usage(FALLBACK_LOOP_REPLY)

@@ -4,13 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import ChatMessage, MenuItem, Order, OrderItem, User, UserPreference
+from app.models import ChatMessage, MenuItem, Order, OrderItem, PendingPreferenceChange, User, UserPreference
 from app.schemas import (
     ChatMessageOut,
     ChatRequest,
     ChatResponse,
     OrderConfirmationRequest,
     OrderOut,
+    PendingPreferenceChangeOut,
+    PreferenceOut,
     Recommendation,
 )
 from app.services import agent
@@ -67,6 +69,10 @@ async def chat(
         reply=result.reply,
         recommendations=[Recommendation(**r) for r in result.recommendations],
         pending_order=OrderOut(**result.pending_order) if result.pending_order else None,
+        pending_preference_change=(
+            PendingPreferenceChangeOut(**result.pending_preference_change)
+            if result.pending_preference_change else None
+        ),
     )
 
 
@@ -131,6 +137,49 @@ async def confirm_order(
     order.status = "placed"
     await db.commit()
     return _order_out(order)
+
+
+@router.get("/preferences/pending", response_model=list[PendingPreferenceChangeOut])
+async def pending_preference_changes(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    changes = await db.scalars(
+        select(PendingPreferenceChange)
+        .where(PendingPreferenceChange.user_id == user.id, PendingPreferenceChange.status == "pending")
+        .order_by(PendingPreferenceChange.id)
+    )
+    return [
+        PendingPreferenceChangeOut(id=c.id, changes=c.changes, status=c.status) for c in changes
+    ]
+
+
+@router.post("/preferences/{change_id}/confirm", response_model=PreferenceOut)
+async def confirm_preference_change(
+    change_id: int,
+    payload: OrderConfirmationRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    change = await db.scalar(
+        select(PendingPreferenceChange)
+        .where(PendingPreferenceChange.id == change_id, PendingPreferenceChange.user_id == user.id)
+    )
+    if change is None:
+        raise HTTPException(status_code=404, detail="Pending preference change not found")
+    if change.status != "pending":
+        raise HTTPException(status_code=409, detail=f"Change is already {change.status}")
+
+    prefs = await _get_prefs(db, user)
+    if not payload.confirmed:
+        change.status = "cancelled"
+        await db.commit()
+        await db.refresh(prefs)
+        return prefs
+
+    for field, value in change.changes.items():
+        setattr(prefs, field, value)
+    change.status = "confirmed"
+    await db.commit()
+    await db.refresh(prefs)
+    return prefs
 
 
 @router.get("/history", response_model=list[ChatMessageOut])

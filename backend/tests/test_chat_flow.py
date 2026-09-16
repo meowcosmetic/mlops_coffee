@@ -65,17 +65,61 @@ async def test_update_profile_via_chat(client, monkeypatch):
     token = await register_user(client)
     stub_agent_model(monkeypatch, [
         ai_tool_call("update_profile", {"allergies": ["dairy", "nuts"], "temperature": "iced"}),
-        ai_text("Got it, I've saved your preferences!"),
+        ai_text("Got it, please confirm these changes."),
     ])
 
     resp = await client.post("/api/chat", json={"message": "I'm allergic to dairy and nuts, and I like iced drinks"},
                              headers=auth_headers(token))
     assert resp.status_code == 200
-    assert resp.json()["reply"] == "Got it, I've saved your preferences!"
+    assert resp.json()["reply"] == "Got it, please confirm these changes."
+    assert resp.json()["pending_preference_change"]["changes"] == {
+        "allergies": ["dairy", "nuts"], "temperature": "iced"
+    }
+
+
+async def test_update_profile_creates_pending_change_until_confirmed(client, db_session, monkeypatch):
+    token = await register_user(client)
+    stub_agent_model(monkeypatch, [
+        ai_tool_call("update_profile", {"allergies": ["dairy", "nuts"], "temperature": "iced"}),
+        ai_text("Please confirm these preference changes."),
+    ])
+
+    resp = await client.post("/api/chat", json={"message": "I'm allergic to dairy and nuts, and I like iced drinks"},
+                             headers=auth_headers(token))
+    assert resp.status_code == 200
+    pending = resp.json()["pending_preference_change"]
+    assert pending is not None
+    assert pending["changes"] == {"allergies": ["dairy", "nuts"], "temperature": "iced"}
+    assert pending["status"] == "pending"
+
+    # not applied yet
+    prefs = (await client.get("/api/users/me/preferences", headers=auth_headers(token))).json()
+    assert prefs["allergies"] == []
+    assert prefs["temperature"] is None
+
+    confirm = await client.post(f"/api/chat/preferences/{pending['id']}/confirm", json={"confirmed": True},
+                                headers=auth_headers(token))
+    assert confirm.status_code == 200
+    assert confirm.json()["allergies"] == ["dairy", "nuts"]
+    assert confirm.json()["temperature"] == "iced"
+
+
+async def test_reject_pending_preference_change_leaves_profile_untouched(client, monkeypatch):
+    token = await register_user(client)
+    stub_agent_model(monkeypatch, [
+        ai_tool_call("update_profile", {"tastes": ["sweet"]}),
+        ai_text("Please confirm."),
+    ])
+
+    resp = await client.post("/api/chat", json={"message": "I like sweet drinks"}, headers=auth_headers(token))
+    pending_id = resp.json()["pending_preference_change"]["id"]
+
+    cancel = await client.post(f"/api/chat/preferences/{pending_id}/confirm", json={"confirmed": False},
+                               headers=auth_headers(token))
+    assert cancel.status_code == 200
 
     prefs = (await client.get("/api/users/me/preferences", headers=auth_headers(token))).json()
-    assert prefs["allergies"] == ["dairy", "nuts"]
-    assert prefs["temperature"] == "iced"
+    assert prefs["tastes"] == []
 
 
 async def test_recommend_drink_excludes_allergens(client, seeded_menu, monkeypatch):
