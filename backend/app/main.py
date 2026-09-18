@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.llm_versions import current_version
-from app.routers import auth, chat, menu, users, telemetry
+from app.database import get_db
+from app.llm_versions import build_version, current_version
+from app.routers import auth, chat, menu, prompts, telemetry, users
+from app.services import prompts as prompts_service
 
 app = FastAPI(
     title="chatBotDrinkRecommendation",
@@ -23,14 +26,16 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(menu.router, prefix="/api")
+app.include_router(prompts.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(telemetry.router, prefix="/api")
 
 
 
 @app.get("/api/health", tags=["health"])
-async def health():
-    version = current_version()
+async def health(db: AsyncSession = Depends(get_db)):
+    prompt_row = await prompts_service.get_active_prompt(db)
+    version = build_version(prompt_row)
     return {
         "status": "ok",
         "llm_provider": version.provider,

@@ -131,11 +131,36 @@ class OrderConfirmationRequest(BaseModel):
     confirmed: bool
 
 
+class PendingPreferenceChangeOut(BaseModel):
+    id: int
+    changes: dict
+    status: str
+
+
+class PromptVersionCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    version: str = Field(min_length=1, max_length=20)
+    template: str = Field(min_length=1)
+    activate: bool = False
+
+
+class PromptVersionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    version: str
+    template: str
+    prompt_hash: str
+    is_active: bool
+
+
 class ChatResponse(BaseModel):
     reply: str
     recommendations: list[Recommendation] = []
     order: OrderOut | None = None
     pending_order: OrderOut | None = None
+    pending_preference_change: PendingPreferenceChangeOut | None = None
 
 
 class ChatMessageOut(BaseModel):

@@ -9,7 +9,6 @@ from functools import lru_cache
 from langchain_openai import ChatOpenAI
 
 from app.config import settings
-from app.llm_versions import current_version
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +70,15 @@ def get_chat_model(model_name: str | None = None) -> ChatOpenAI:
     )
 
 
+def invoke(model, messages, version=None):
+    """Invoke a model and emit redacted operational metadata as one JSON log event.
 
-def invoke(model, messages):
-    """Invoke a model and emit redacted operational metadata as one JSON log event."""
-    version = current_version()
+    `version` is an `app.llm_versions.LLMVersion` describing the active prompt/model,
+    fetched by the caller (the DB is the source of truth, not a hardcoded constant).
+    """
+    if version is None:
+        from app.llm_versions import current_version
+        version = current_version()
     request_id = str(uuid.uuid4())
     started = time.perf_counter()
     try:

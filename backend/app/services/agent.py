@@ -13,9 +13,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import MenuItem, Order, OrderItem, User, UserPreference
+from app.models import MenuItem, Order, OrderItem, PendingPreferenceChange, User, UserPreference
+from app import llm_versions
 from app.llm_versions import SYSTEM_PROMPT_TEMPLATE, SYSTEM_PROMPT_VERSION, current_version
-from app.services import llm, recommendation
+from app.services import llm, prompts, recommendation
 from app.services import langfuse_service, prompt_service
 from app.services.rag_service import rag_service
 import time
@@ -123,6 +124,7 @@ class AgentResult:
     reply: str
     recommendations: list[dict] = field(default_factory=list)
     pending_order: dict | None = None
+    pending_preference_change: dict | None = None
     model_name: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -143,23 +145,19 @@ def _build_messages(user: User, prefs: UserPreference, history: list[tuple[str, 
     return messages, system_text
 
 
-def _exec_update_profile(prefs: UserPreference, args: dict) -> dict:
-    applied = {}
+def _compute_profile_changes(args: dict) -> dict:
+    changes = {}
     for field_name in _LIST_FIELDS:
         value = args.get(field_name)
         if isinstance(value, list) and all(isinstance(v, str) for v in value):
-            cleaned = [v.strip().lower() for v in value if v.strip()]
-            setattr(prefs, field_name, cleaned)
-            applied[field_name] = cleaned
+            changes[field_name] = [v.strip().lower() for v in value if v.strip()]
     temperature = args.get("temperature")
     if temperature in _TEMPERATURE_VALUES:
-        prefs.temperature = temperature
-        applied["temperature"] = temperature
+        changes["temperature"] = temperature
     caffeine = args.get("caffeine")
     if caffeine in _CAFFEINE_VALUES:
-        prefs.caffeine = caffeine
-        applied["caffeine"] = caffeine
-    return {"updated": applied}
+        changes["caffeine"] = caffeine
+    return changes
 
 
 async def _exec_recommend_drink(
@@ -260,7 +258,14 @@ async def _dispatch(db: AsyncSession, user: User, prefs: UserPreference, call: d
     name = call.get("name")
     args = call.get("args") or {}
     if name == TOOL_UPDATE_PROFILE:
-        return _exec_update_profile(prefs, args), None
+        changes = _compute_profile_changes(args)
+        if not changes:
+            return {"updated": {}}, None
+        pending = PendingPreferenceChange(user_id=user.id, changes=changes, status="pending")
+        db.add(pending)
+        await db.flush()
+        pending_dict = {"id": pending.id, "changes": changes, "status": pending.status}
+        return {"pending_changes": changes}, pending_dict
     if name == TOOL_RECOMMEND_DRINK:
         result, recommendations = await _exec_recommend_drink(
             db, prefs, query=args.get("query")
@@ -288,11 +293,27 @@ async def run_chat_turn(
     tools_called_list: list[str] = []
     tool_calls_detail: list[dict] = []
 
-    active_prompt = (
-        prompt_service.get_prompt_by_version(prompt_version)
-        if prompt_version
-        else None
-    ) or prompt_service.get_active_prompt()
+    try:
+        from app.models import PromptVersion
+        if prompt_version:
+            row = await db.scalar(select(PromptVersion).where(PromptVersion.version == prompt_version))
+            if row:
+                prompt_row = row
+            else:
+                prompt_row = await prompts.get_active_prompt(db)
+        else:
+            prompt_row = await prompts.get_active_prompt(db)
+        version = llm_versions.build_version(prompt_row)
+        template_text = prompt_row.template
+    except Exception:
+        active_prompt = (
+            prompt_service.get_prompt_by_version(prompt_version)
+            if prompt_version
+            else None
+        ) or prompt_service.get_active_prompt()
+        version = llm_versions.current_version()
+        template_text = active_prompt.template
+
     if model_name:
         effective_model_name = model_name
     else:
@@ -302,17 +323,19 @@ async def run_chat_turn(
             if active and active.name not in ("ag/gemini-3.8-flash-low", "gpt-4o-mini"):
                 effective_model_name = active.name
             else:
-                effective_model_name = settings.openai_model
+                effective_model_name = version.model or settings.openai_model
         except Exception:
-            effective_model_name = settings.openai_model
+            effective_model_name = version.model or settings.openai_model
+
     try:
         raw_model = llm.get_chat_model(model_name=effective_model_name)
     except TypeError:
         raw_model = llm.get_chat_model()
     model = raw_model.bind_tools(TOOL_SCHEMAS)
-    messages, system_prompt_text = _build_messages(user, prefs, history, message, active_prompt.template)
+    messages, system_prompt_text = _build_messages(user, prefs, history, message, template_text)
     recommendations: list[dict] = []
     pending_order: dict | None = None
+    pending_preference_change: dict | None = None
     usage = llm.LLMUsage()
 
     def result_with_usage(reply: str, success: bool = True, error: str | None = None) -> AgentResult:
@@ -344,19 +367,20 @@ async def run_chat_turn(
             print("Langfuse trace record warning:", log_err)
 
         return AgentResult(
-            reply,
-            recommendations,
-            pending_order,
-            effective_model_name if any(value is not None for value in (
+            reply=reply,
+            recommendations=recommendations,
+            pending_order=pending_order,
+            pending_preference_change=pending_preference_change,
+            model_name=effective_model_name if any(value is not None for value in (
                 usage.input_tokens,
                 usage.output_tokens,
                 usage.total_tokens,
                 usage.estimated_cost_usd,
             )) else None,
-            usage.input_tokens,
-            usage.output_tokens,
-            usage.total_tokens,
-            usage.estimated_cost_usd,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+            estimated_cost_usd=usage.estimated_cost_usd,
         )
 
 
@@ -369,7 +393,7 @@ async def run_chat_turn(
 
     for _ in range(MAX_TOOL_ITERATIONS):
         try:
-            invocation = await to_thread.run_sync(llm.invoke, model, messages)
+            invocation = await to_thread.run_sync(llm.invoke, model, messages, version)
         except Exception as exc:
             print("Error invoking model:", exc)
             return result_with_usage(FALLBACK_ERROR_REPLY, success=False, error=str(exc))
@@ -404,6 +428,8 @@ async def run_chat_turn(
                 recommendations = extra
             elif tool_name == TOOL_ORDER and extra is not None:
                 pending_order = extra
+            elif call.get("name") == TOOL_UPDATE_PROFILE and extra is not None:
+                pending_preference_change = extra
             messages.append(ToolMessage(content=json.dumps(result, default=str), tool_call_id=call.get("id")))
 
     return result_with_usage(FALLBACK_LOOP_REPLY, success=False, error="Max tool iterations reached")

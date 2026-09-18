@@ -49,3 +49,12 @@ async def test_admin_key_enforced_when_configured(client, monkeypatch):
     assert resp.status_code == 403
     resp = await client.post("/api/menu", json=body, headers={"X-Admin-Key": "secret-key"})
     assert resp.status_code == 201
+
+
+async def test_seed_data_covers_topic_drink_categories():
+    from app.seed import SAMPLE_DRINKS
+
+    categories = {d["category"] for d in SAMPLE_DRINKS}
+    assert "protein" in categories, "topic requires protein drinks on the menu"
+    detox_items = [d for d in SAMPLE_DRINKS if "detox" in d["name"].lower() or "detox" in d["description"].lower()]
+    assert len(detox_items) >= 2, "topic requires detox drinks on the menu"

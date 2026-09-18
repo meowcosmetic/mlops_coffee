@@ -7,7 +7,9 @@ import asyncio
 from sqlalchemy import select, func
 
 from app.database import SessionLocal
+from app.llm_versions import DEFAULT_SYSTEM_PROMPT_NAME, DEFAULT_SYSTEM_PROMPT_TEMPLATE, DEFAULT_SYSTEM_PROMPT_VERSION
 from app.models import MenuItem
+from app.services import prompts
 
 SAMPLE_DRINKS = [
     # --- Cafe (5) ---
@@ -82,7 +84,7 @@ SAMPLE_DRINKS = [
         "price": 4.95,
         "category": "tea",
     },
-    # --- Fruit juice (5) ---
+    # --- Fruit juice (4) ---
     {
         "name": "Fresh Orange Juice",
         "description": "100% freshly squeezed oranges, nothing else.",
@@ -118,7 +120,52 @@ SAMPLE_DRINKS = [
         "price": 5.25,
         "category": "fruit juice",
     },
+    {
+        "name": "Citrus Detox Cleanse",
+        "description": "Lemon, turmeric and ginger detox blend to reset your morning.",
+        "ingredients": ["lemon", "turmeric", "ginger", "water"],
+        "price": 5.00,
+        "category": "fruit juice",
+    },
+    # --- Protein (3) ---
+    {
+        "name": "Chocolate Protein Shake",
+        "description": "Rich chocolate whey protein blended with milk and banana.",
+        "ingredients": ["whey protein", "milk", "banana", "cocoa"],
+        "price": 6.00,
+        "category": "protein",
+    },
+    {
+        "name": "Vanilla Protein Smoothie",
+        "description": "Vanilla plant-based protein with oat milk and berries.",
+        "ingredients": ["pea protein", "oat milk", "strawberry", "blueberry"],
+        "price": 6.25,
+        "category": "protein",
+    },
+    {
+        "name": "Peanut Butter Protein Blast",
+        "description": "Peanut butter and banana protein shake for post-workout recovery.",
+        "ingredients": ["whey protein", "peanut butter", "banana", "milk"],
+        "price": 6.50,
+        "category": "protein",
+    },
 ]
+
+
+async def seed_prompt(session) -> None:
+    try:
+        await prompts.get_active_prompt(session, name=DEFAULT_SYSTEM_PROMPT_NAME)
+        print("Active prompt already seeded, skipping.")
+    except LookupError:
+        await prompts.create_version(
+            session,
+            name=DEFAULT_SYSTEM_PROMPT_NAME,
+            template=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+            version=DEFAULT_SYSTEM_PROMPT_VERSION,
+            activate=True,
+        )
+        await session.commit()
+        print("Seeded initial prompt version.")
 
 
 async def seed() -> None:
@@ -126,10 +173,11 @@ async def seed() -> None:
         count = await session.scalar(select(func.count(MenuItem.id)))
         if count:
             print(f"Menu already seeded ({count} items), skipping.")
-            return
-        session.add_all(MenuItem(**drink) for drink in SAMPLE_DRINKS)
-        await session.commit()
-        print(f"Seeded {len(SAMPLE_DRINKS)} menu items.")
+        else:
+            session.add_all(MenuItem(**drink) for drink in SAMPLE_DRINKS)
+            await session.commit()
+            print(f"Seeded {len(SAMPLE_DRINKS)} menu items.")
+        await seed_prompt(session)
 
 
 if __name__ == "__main__":

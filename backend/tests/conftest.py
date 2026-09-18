@@ -75,7 +75,14 @@ async def db_session():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
+    from app.llm_versions import DEFAULT_SYSTEM_PROMPT_NAME, DEFAULT_SYSTEM_PROMPT_TEMPLATE, DEFAULT_SYSTEM_PROMPT_VERSION
+    from app.services import prompts as prompts_service
     async with factory() as session:
+        await prompts_service.create_version(
+            session, name=DEFAULT_SYSTEM_PROMPT_NAME, template=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+            version=DEFAULT_SYSTEM_PROMPT_VERSION, activate=True,
+        )
+        await session.commit()
         yield session
     await engine.dispose()
 
