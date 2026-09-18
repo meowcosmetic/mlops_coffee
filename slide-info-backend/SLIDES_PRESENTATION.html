@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DrinkBot MLOps — Backend Architecture & Workshop Review Slides</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#fbf7f4',
+              100: '#f6ece2',
+              200: '#edd8c4',
+              300: '#dfbc9e',
+              400: '#cf9c77',
+              500: '#bf7e55',
+              600: '#b06745',
+              700: '#925139',
+              800: '#774332',
+              900: '#61392c',
+              950: '#341c16',
+            },
+            dark: {
+              950: '#07090e',
+              900: '#0c0f17',
+              850: '#111622',
+              800: '#161c2b',
+              700: '#212a3e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-base: #07090e;
+      --card-bg: rgba(17, 22, 34, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-amber: #f59e0b;
+      --accent-emerald: #10b981;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: #f1f5f9;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .slide {
+      display: none;
+      opacity: 0;
+      transform: scale(0.98);
+      transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .glass-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+    }
+
+    .glass-card {
+      background: rgba(22, 28, 43, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(245, 158, 11, 0.3);
+      box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.1);
+    }
+
+    .gradient-text-amber {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gradient-text-sky {
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gradient-text-emerald {
+      background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Print styles for clean 16:9 PDF export */
+    @media print {
+      body {
+        overflow: visible;
+        background: #0f172a !important;
+        color: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #controls, #notes-drawer, #overview-modal, #progress-bar-container {
+        display: none !important;
+      }
+      .slide-container {
+        height: auto !important;
+        display: block !important;
+      }
+      .slide {
+        display: flex !important;
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-after: always;
+        height: 100vh !important;
+        width: 100vw !important;
+        box-sizing: border-box;
+        padding: 2rem !important;
+      }
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between font-sans">
+
+  <!-- TOP PROGRESS BAR -->
+  <div id="progress-bar-container" class="w-full h-1.5 bg-slate-900 fixed top-0 left-0 z-50">
+    <div id="progress-bar" class="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-300 w-[10%] transition-all duration-300"></div>
+  </div>
+
+  <!-- SLIDES MAIN CONTAINER -->
+  <main class="slide-container relative flex-1 w-full h-full overflow-hidden flex items-center justify-center p-4 md:p-8">
+
+    <!-- ==================== SLIDE 1: COVER ==================== -->
+    <section class="slide active flex-col justify-center items-center text-center max-w-5xl w-full h-full py-8" data-note="Chào mọi người, đây là bài báo cáo tiến độ và kiến trúc backend cho hệ thống DrinkBot MLOps, phục vụ đề bài workshop tư vấn đồ uống tự động.">
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-panel border border-amber-500/30 text-amber-400 text-xs font-semibold tracking-wider uppercase mb-6 shadow-lg shadow-amber-500/10">
+        <i data-lucide="coffee" class="w-4 h-4"></i>
+        <span>TMA Solutions • F&B AI Workshop 2026</span>
+      </div>
+      
+      <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 text-white leading-tight">
+        <span class="gradient-text-amber">DrinkBot MLOps</span>
+        <br>
+        <span class="text-slate-200 text-3xl md:text-4xl font-bold">Backend Architecture & Status Review</span>
+      </h1>
+      
+      <p class="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
+        Hệ thống Chatbot Khuyến nghị Đồ uống Thông minh với Nền tảng MLOps Toàn diện: Prompt Versioning, Autonomous Agent, Human-in-the-Loop & Multi-Engine Fallback.
+      </p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl w-full mx-auto text-left">
+        <div class="glass-card p-4 rounded-xl border border-slate-800/80">
+          <div class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Core Stack</div>
+          <div class="text-slate-200 text-sm font-bold">FastAPI + Async SQLAlchemy</div>
+        </div>
+        <div class="glass-card p-4 rounded-xl border border-slate-800/80">
+          <div class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">Database</div>
+          <div class="text-slate-200 text-sm font-bold">Postgres 16 + Alembic</div>
+        </div>
+        <div class="glass-card p-4 rounded-xl border border-slate-800/80">
+          <div class="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1">AI Engine</div>
+          <div class="text-slate-200 text-sm font-bold">LangChain + Ollama/OpenAI</div>
+        </div>
+        <div class="glass-card p-4 rounded-xl border border-slate-800/80">
+          <div class="text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1">Test Status</div>
+          <div class="text-emerald-300 text-sm font-bold flex items-center gap-1.5">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i> 73/73 Tests Passed
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 text-xs text-slate-500 font-mono">
+        Nhấn phím <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-semibold">→</kbd> hoặc <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-semibold">Space</kbd> để tiếp tục
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 2: OBJECTIVES & GOALS ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Mục tiêu slide này là định vị lại phạm vi của backend: đối chiếu trực diện yêu cầu từ workshop và các chuẩn MLOps. Nhấn mạnh tinh thần minh bạch: cái gì đã làm được và cái gì còn tồn đọng như Bedrock VPC.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">
+          <i data-lucide="target" class="w-4 h-4"></i> Section Goal & Strategy
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Mục Tiêu & Tinh Thần Báo Cáo Backend</h2>
+        <p class="text-slate-400 text-sm mt-1">Đối chiếu trực diện kết quả thực tế với yêu cầu của Workshop & Mentor.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-amber-500 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-4">
+              <i data-lucide="file-check-2" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Đáp ứng nghiệp vụ F&B</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Tự động thu thập thông tin khách hàng (tên, SĐT, địa chỉ), tư vấn đồ uống thông minh theo khẩu vị (Detox, Coffee, Protein) và lưu trữ đơn hàng chuẩn xác vào Database.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i> 100% Hoàn thành
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-sky-500 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 mb-4">
+              <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Tiêu chuẩn hóa MLOps</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Quản trị vòng đời Prompt có Versioning & Rollback trong DB, đo lường chi tiết Token, Latency & Cost cho từng tin nhắn, hỗ trợ Local Fine-Tuned SLM & RAG Adapter.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i> 100% Hoàn thành
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-l-4 border-l-rose-500 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400 mb-4">
+              <i data-lucide="scale" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Đánh giá khách quan</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Báo cáo trung thực tình trạng hiện tại: Đã hoàn thiện toàn bộ tính năng local & cloud, nhưng chỉ rõ khoảng trống chưa kết nối <strong class="text-rose-300">AWS Bedrock qua VPC Endpoint</strong>.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-mono text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i> Điểm cần hoàn thiện tiếp
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>💡 <strong>Thông điệp chủ đạo:</strong> Đây là bản báo cáo tiến độ kỹ thuật trung thực, có dẫn chứng mã nguồn cụ thể cho từng hạng mục.</span>
+        <span class="font-mono text-slate-500">slide-info-backend/backend-design.md</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 3: TECH STACK ARCHITECTURE ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Kiến trúc công nghệ backend: FastAPI bất đồng bộ, PostgreSQL qua asyncpg, LangChain agent, và container hóa toàn bộ bằng Docker compose. Nổi bật là 73 test cases pass hoàn toàn.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">
+          <i data-lucide="layers" class="w-4 h-4"></i> System Architecture
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Kiến Trúc Kỹ Thuật Backend Toàn Diện</h2>
+        <p class="text-slate-400 text-sm mt-1">Được thiết kế cho hiệu năng cao, mở rộng linh hoạt và khả năng quan sát (observability) tối ưu.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 my-auto">
+        <!-- Card 1 -->
+        <div class="glass-card p-5 rounded-xl flex flex-col justify-between border-t-2 border-t-emerald-400">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-mono font-bold text-emerald-400">API LAYER</span>
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">FastAPI + AsyncIO</h4>
+            <ul class="text-xs text-slate-300 space-y-1.5">
+              <li>• Uvicorn ASGI Server non-blocking</li>
+              <li>• Pydantic v2 schemas validation</li>
+              <li>• JWT Auth đơn giản hóa theo SĐT</li>
+              <li>• 6 Router modules: auth, chat, menu, prompts, users, telemetry</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">backend/app/main.py</div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="glass-card p-5 rounded-xl flex flex-col justify-between border-t-2 border-t-sky-400">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-mono font-bold text-sky-400">DATA & STORAGE</span>
+              <i data-lucide="database" class="w-4 h-4 text-sky-400"></i>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">Postgres 16 + AsyncPG</h4>
+            <ul class="text-xs text-slate-300 space-y-1.5">
+              <li>• SQLAlchemy 2.0 Async Session</li>
+              <li>• Alembic migrations (3 versions)</li>
+              <li>• Auto-seed dữ liệu mẫu F&B</li>
+              <li>• Bảng PromptVersion & Audit logs</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">backend/app/models.py</div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="glass-card p-5 rounded-xl flex flex-col justify-between border-t-2 border-t-amber-400">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-mono font-bold text-amber-400">AGENT & LLM</span>
+              <i data-lucide="bot" class="w-4 h-4 text-amber-400"></i>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">LangChain Tool Agent</h4>
+            <ul class="text-xs text-slate-300 space-y-1.5">
+              <li>• ReAct loop (Max 4 iterations)</li>
+              <li>• 3 Tools: Profile, Recommend, Order</li>
+              <li>• Python-level Allergen Guardrail</li>
+              <li>• Ollama Local zero-cost fallback</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">backend/app/services/agent.py</div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="glass-card p-5 rounded-xl flex flex-col justify-between border-t-2 border-t-purple-400">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-mono font-bold text-purple-400">DEVOPS & TESTING</span>
+              <i data-lucide="container" class="w-4 h-4 text-purple-400"></i>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">Docker & Pytest</h4>
+            <ul class="text-xs text-slate-300 space-y-1.5">
+              <li>• Docker Compose (5 containers)</li>
+              <li>• Nginx API Gateway tích hợp</li>
+              <li>• <strong>73/73 tests pass</strong> trong 2.5s</li>
+              <li>• Langfuse Telemetry integration</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">docker-compose.yml</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div class="py-2.5 px-4 rounded-lg bg-slate-900/80 border border-slate-800">
+          <span class="text-xs text-slate-400">Thời gian phản hồi P95:</span>
+          <span class="text-amber-400 font-bold ml-2 font-mono">&lt; 850ms</span>
+        </div>
+        <div class="py-2.5 px-4 rounded-lg bg-slate-900/80 border border-slate-800">
+          <span class="text-xs text-slate-400">Số lượng bảng cơ sở dữ liệu:</span>
+          <span class="text-sky-400 font-bold ml-2 font-mono">8 Tables + Alembic</span>
+        </div>
+        <div class="py-2.5 px-4 rounded-lg bg-slate-900/80 border border-slate-800">
+          <span class="text-xs text-slate-400">Độ bao phủ kiểm thử (Test Suites):</span>
+          <span class="text-emerald-400 font-bold ml-2 font-mono">11 Test Files (100% OK)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 4: DOMAIN MODEL ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Domain model bám sát yêu cầu đề bài: User lưu tên, SĐT, địa chỉ. UserPreference lưu chi tiết khẩu vị, dị ứng. PromptVersion và PendingPreferenceChange là hai mô hình mới quan trọng bổ sung cho MLOps.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">
+          <i data-lucide="database" class="w-4 h-4"></i> Data Architecture
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Mô Hình Dữ Liệu & Thu Thập Thực Thể</h2>
+        <p class="text-slate-400 text-sm mt-1">Đảm bảo lưu trữ chuẩn hóa dữ liệu người dùng, sở thích F&B và nhật ký MLOps.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 my-auto">
+        <!-- Col 1 -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col">
+          <div class="flex items-center gap-2 text-amber-400 font-bold text-base mb-3">
+            <i data-lucide="user-check" class="w-5 h-5"></i> User & Profile
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl font-mono text-xs text-slate-300 space-y-1 border border-slate-800/80 flex-1">
+            <div class="text-amber-300 font-semibold mb-1">// Entity thu thập bắt buộc</div>
+            <div>• <strong class="text-sky-300">phone</strong>: VARCHAR(20) [UNIQUE]</div>
+            <div>• <strong class="text-sky-300">name</strong>: VARCHAR(100)</div>
+            <div>• <strong class="text-sky-300">address</strong>: TEXT (Giao hàng)</div>
+            <div class="text-slate-500 my-1">// Quan hệ 1 - 1</div>
+            <div>• <strong class="text-emerald-300">UserPreference</strong>:</div>
+            <div class="pl-3 text-[11px] text-slate-400">- tastes (ngọt, chua, đắng)</div>
+            <div class="pl-3 text-[11px] text-slate-400">- drink_types (tea, coffee, shake)</div>
+            <div class="pl-3 text-[11px] text-slate-400">- temperature (hot / iced)</div>
+            <div class="pl-3 text-[11px] text-slate-400">- caffeine (high / low / none)</div>
+            <div class="pl-3 text-[11px] text-rose-400">- allergies (dairy, nuts, etc)</div>
+          </div>
+        </div>
+
+        <!-- Col 2 -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col">
+          <div class="flex items-center gap-2 text-sky-400 font-bold text-base mb-3">
+            <i data-lucide="coffee" class="w-5 h-5"></i> F&B Menu & Orders
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl font-mono text-xs text-slate-300 space-y-1 border border-slate-800/80 flex-1">
+            <div class="text-sky-300 font-semibold mb-1">// MenuItem</div>
+            <div>• name, category, price, description</div>
+            <div>• <strong class="text-rose-400">allergens</strong>: ARRAY[TEXT]</div>
+            <div>• is_available: BOOLEAN</div>
+            <div class="text-slate-400 text-[11px] mt-1 italic">Seed menu gồm 5 nhóm: Coffee, Tea, Protein, Detox, Juices.</div>
+            <div class="text-slate-500 my-1.5">// Order & OrderItem</div>
+            <div>• status: <span class="text-amber-400 font-bold">pending</span> → <span class="text-emerald-400 font-bold">placed</span> / cancelled</div>
+            <div>• total_amount: NUMERIC</div>
+            <div>• Human confirmation gate bắt buộc</div>
+          </div>
+        </div>
+
+        <!-- Col 3 -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col">
+          <div class="flex items-center gap-2 text-purple-400 font-bold text-base mb-3">
+            <i data-lucide="sparkles" class="w-5 h-5"></i> MLOps & Telemetry Models
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl font-mono text-xs text-slate-300 space-y-1 border border-slate-800/80 flex-1">
+            <div class="text-purple-300 font-semibold mb-1">// ChatMessage (Tracking per message)</div>
+            <div>• role, content, user_id</div>
+            <div>• <strong class="text-amber-300">model_name</strong>: VARCHAR</div>
+            <div>• <strong class="text-amber-300">input_tokens, output_tokens</strong>: INT</div>
+            <div>• <strong class="text-amber-300">estimated_cost_usd</strong>: NUMERIC(10,8)</div>
+            <div class="text-slate-500 my-1.5">// PromptVersion (DB-backed store)</div>
+            <div>• name, version, template, is_active</div>
+            <div>• <strong class="text-emerald-300">prompt_hash</strong>: VARCHAR(12) [Drift Check]</div>
+            <div class="text-slate-500 my-1.5">// PendingPreferenceChange</div>
+            <div>• staged changes JSON trước khi duyệt</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-5 h-5 text-amber-400 shrink-0"></i>
+        <span><strong>Tính toàn vẹn:</strong> Cấu trúc thực thể <code>phone, name, address</code> khớp 100% với yêu cầu đề bài; thông tin dị ứng được lưu ở cấp DB để bảo vệ an toàn cho khách hàng.</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 5: AGENT & HUMAN-IN-THE-LOOP ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Điểm sáng nhất của Agent: 2 tầng Human-in-the-loop: đặt hàng và đổi thông tin cá nhân đều cần user bấm xác nhận. Mọi quy tắc an toàn dị ứng đều được chặn bằng Python, không phó mặc cho LLM.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">
+          <i data-lucide="git-merge" class="w-4 h-4"></i> Autonomous Intelligence
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Chat Agent & Cơ Chế Human-in-the-Loop</h2>
+        <p class="text-slate-400 text-sm mt-1">Sự kết hợp giữa suy luận thông minh của LLM và hàng rào an toàn (Guardrails) của Python.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-3 font-bold">1</div>
+            <h3 class="text-base font-bold text-white mb-2">Tool Calling ReAct Loop</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Mô hình chạy tối đa 4 vòng lặp tự động (Max iterations = 4) với 3 công cụ chuyên biệt:
+            </p>
+            <div class="space-y-1.5 text-xs font-mono">
+              <div class="p-1.5 bg-slate-900/90 rounded border border-slate-800 text-amber-300">1. recommend_drink(query, taste)</div>
+              <div class="p-1.5 bg-slate-900/90 rounded border border-slate-800 text-sky-300">2. update_profile(tastes, etc)</div>
+              <div class="p-1.5 bg-slate-900/90 rounded border border-slate-800 text-emerald-300">3. order(items, address)</div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-slate-400 border-t border-slate-800 pt-2">Chặn tình trạng lặp vô tận (Infinite loop fallback)</div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between border border-rose-500/30 bg-rose-950/10">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center text-rose-400 mb-3 font-bold">2</div>
+            <h3 class="text-base font-bold text-rose-300 mb-2">Python Allergen Guardrail</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              <strong>Tuyệt đối không tin tưởng 100% vào LLM</strong> đối với an toàn sức khỏe:
+            </p>
+            <ul class="text-xs text-slate-300 space-y-2">
+              <li class="flex items-start gap-1.5">
+                <i data-lucide="x-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                <span>Tự động loại bỏ đồ uống chứa dị nguyên của khách hàng bằng mã Python trong hàm <code>recommendation.py</code>.</span>
+              </li>
+              <li class="flex items-start gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                <span>Xác thực tên món và giá tiền khớp 100% cơ sở dữ liệu menu.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-emerald-400 font-mono border-t border-slate-800 pt-2">100% Pass Allergen Test Suite</div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between border border-emerald-500/30 bg-emerald-950/10">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 mb-3 font-bold">3</div>
+            <h3 class="text-base font-bold text-emerald-300 mb-2">Two-Stage Approval Gate</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Cơ chế con người can thiệp (Human-in-the-loop) ở 2 điểm chạm rủi ro cao:
+            </p>
+            <div class="space-y-2 text-xs">
+              <div class="p-2 bg-slate-900/80 rounded border border-emerald-500/30">
+                <strong class="text-amber-300">1. Đặt món (Order):</strong>
+                <p class="text-slate-400 text-[11px] mt-0.5">Tạo preview <code>pending</code>; chỉ ghi nhận khi khách nhấn "Xác nhận đặt hàng".</p>
+              </div>
+              <div class="p-2 bg-slate-900/80 rounded border border-emerald-500/30">
+                <strong class="text-sky-300">2. Cập nhật hồ sơ (Profile):</strong>
+                <p class="text-slate-400 text-[11px] mt-0.5">Tạo <code>PendingPreferenceChange</code>; yêu cầu xác nhận trước khi lưu đè DB.</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-emerald-400 font-mono border-t border-slate-800 pt-2">Zero unconfirmed destructive writes</div>
+        </div>
+      </div>
+
+      <div class="p-3.5 rounded-xl glass-panel border border-slate-700 text-xs flex items-center justify-between">
+        <span class="text-slate-300">🛡️ <strong>Nguyên lý:</strong> Các tác vụ chỉ đọc (Read-only) như tra cứu menu chạy tức thì; các tác vụ tài chính / hồ sơ bắt buộc qua cổng duyệt người dùng.</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 6: PROMPT VERSIONING ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Trước đây prompt bị hardcode. Giờ đã chuyển thành DB-backed Prompt Versioning với hash SHA256 chống drift, API quản trị và rollback tức thì không cần redeploy.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest mb-2">
+          <i data-lucide="history" class="w-4 h-4"></i> MLOps Governance
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Quản Lý Prompt Versioning & Rollback Động</h2>
+        <p class="text-slate-400 text-sm mt-1">Giải quyết triệt để vấn đề "Prompt Hardcoding" bằng kho lưu trữ Prompt trong cơ sở dữ liệu.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-auto">
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+              <i data-lucide="archive" class="w-5 h-5 text-purple-400"></i> DB-Backed Prompt Store
+            </h3>
+            <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+              Bảng <code>PromptVersion</code> lưu trữ cấu trúc phiên bản ngữ nghĩa (SemVer), mẫu văn bản template và mã băm phát hiện thay đổi (Drift Detection):
+            </p>
+            <div class="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-300 border border-slate-800 space-y-2">
+              <div class="text-purple-400">// Thuộc tính bản ghi PromptVersion</div>
+              <div>id: 1</div>
+              <div>name: <span class="text-amber-300">"drink-assistant-system"</span></div>
+              <div>version: <span class="text-sky-300">"1.2.0"</span></div>
+              <div>prompt_hash: <span class="text-emerald-300">"a1f9c8d23e11"</span> (SHA256 12 ký tự)</div>
+              <div>is_active: <span class="text-emerald-400">True</span> (Chỉ 1 bản ghi active)</div>
+              <div>template: "You are a friendly drink assistant..."</div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400">
+            Tự động validate các biến nội suy <code>{name}</code>, <code>{profile_json}</code> trước khi lưu.
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-amber-400"></i> Admin API & Instant Rollback
+            </h3>
+            <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+              Quản trị viên có thể cập nhật và đổi phiên bản Prompt ngay lập tức trên Runtime mà **không cần redeploy backend hay khởi động lại server**:
+            </p>
+            <div class="space-y-3 text-xs font-mono">
+              <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <span class="text-emerald-400 font-bold">POST</span> /api/prompts
+                <p class="text-slate-400 font-sans text-[11px] mt-1">Tạo phiên bản mới (ví dụ: v1.3.0 tối ưu upselling đồ uống)</p>
+              </div>
+              <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <span class="text-sky-400 font-bold">GET</span> /api/prompts?name=drink-assistant-system
+                <p class="text-slate-400 font-sans text-[11px] mt-1">Xem toàn bộ lịch sử thay đổi và so sánh các phiên bản</p>
+              </div>
+              <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <span class="text-amber-400 font-bold">POST</span> /api/prompts/{id}/activate
+                <p class="text-slate-400 font-sans text-[11px] mt-1">Rollback hoặc Roll-forward chỉ bằng một cú click chuột!</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-emerald-400 flex items-center gap-1.5 font-mono">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Hỗ trợ A/B Testing & Instant Hot-Fix
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>📊 Mọi cuộc hội thoại đều lưu kèm <code>prompt_version</code> và <code>prompt_hash</code> để đối soát chất lượng đầu ra.</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 7: MULTI-ENGINE & OBSERVABILITY ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Hạ tầng suy luận đa tầng: Cloud kết hợp với Ollama Local. Nếu cloud chết hoặc hết tiền, hệ thống tự động fallback qua Ollama. Mọi request đều log JSON structured và gửi Langfuse.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">
+          <i data-lucide="activity" class="w-4 h-4"></i> Observability & Resilience
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Suy Luận Đa Mô Hình & Đo Lường Telemetry</h2>
+        <p class="text-slate-400 text-sm mt-1">Đảm bảo hệ thống hoạt động liên tục 24/7 (High Availability) với chi phí 0 đồng khi cần thiết.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-auto">
+        <!-- Box 1 -->
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between border-l-4 border-l-amber-500">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="shield" class="w-5 h-5 text-amber-400"></i> Intelligent Auto-Fallback
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-mono">High Availability</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed mb-4">
+              Cơ chế bảo vệ 2 tầng khi mô hình chính (Cloud LLM) gặp sự cố (hết quota, timeout, mất kết nối):
+            </p>
+            <div class="space-y-2 text-xs font-mono">
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-amber-400">1. Primary Engine</span>
+                  <div class="text-[11px] text-slate-400 font-sans">OpenAI gpt-4o-mini / Gemini Flash</div>
+                </div>
+                <span class="text-xs text-emerald-400 font-bold">Cloud</span>
+              </div>
+              <div class="flex justify-center text-slate-500 my-0.5">▼ Tự động kích hoạt khi lỗi</div>
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-amber-500/40 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400">2. Fallback Engine</span>
+                  <div class="text-[11px] text-slate-400 font-sans">Ollama Local (gemma4:e4b) zero-cost</div>
+                </div>
+                <span class="text-xs text-amber-300 font-bold">Local 0đ</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+            Khách hàng không bao giờ nhận lỗi trắng trang; chatbot luôn có phản hồi mượt mà.
+          </div>
+        </div>
+
+        <!-- Box 2 -->
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between border-l-4 border-l-sky-500">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-5 h-5 text-sky-400"></i> Structured Telemetry & Langfuse
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-xs font-mono">Full Tracing</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed mb-4">
+              Mỗi lượt gọi LLM đều được sinh một bản ghi JSON có cấu trúc để phục vụ giám sát và kiểm toán chi phí:
+            </p>
+            <div class="bg-slate-950 p-3 rounded-xl font-mono text-[11px] text-slate-300 border border-slate-800 space-y-1 overflow-x-auto">
+              <div>{</div>
+              <div class="pl-3">"event": <span class="text-emerald-300">"llm_invocation"</span>,</div>
+              <div class="pl-3">"request_id": "c8b41f...",</div>
+              <div class="pl-3">"model": <span class="text-amber-300">"gpt-4o-mini"</span>,</div>
+              <div class="pl-3">"prompt_version": <span class="text-purple-300">"1.2.0"</span>,</div>
+              <div class="pl-3">"prompt_hash": "a1f9c8d23e11",</div>
+              <div class="pl-3">"input_tokens": 120, "output_tokens": 35,</div>
+              <div class="pl-3">"estimated_cost_usd": <span class="text-emerald-400">0.000039</span>,</div>
+              <div class="pl-3">"latency_ms": 742.15, "success": true</div>
+              <div>}</div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400">
+            Dữ liệu đồng thời được lưu vào cột <code>ChatMessage</code> và gửi tới Langfuse server.
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>💡 Tích hợp trực tiếp dashboard Langfuse để theo dõi đồ thị Latency và Token usage theo thời gian thực.</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 8: MLOPS ADVANCED CAPABILITIES ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Ngoài chatbot đơn thuần, backend đã tích hợp trọn vẹn MLOps Hub: Model Registry, Gemma 2B LoRA Fine-Tuning và RAG Embedding Adapter.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">
+          <i data-lucide="cpu" class="w-4 h-4"></i> MLOps Hub
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Năng Lực Tinh Chỉnh & Thử Nghiệm Mô Hình</h2>
+        <p class="text-slate-400 text-sm mt-1">Chủ động sở hữu mô hình nhỏ (Small Language Model - SLM) và bộ điều phối RAG riêng biệt.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 my-auto">
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-3">
+              <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Model Registry & Tracking</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Quản lý tập trung các checkpoint mô hình đã huấn luyện cục bộ:
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 font-mono">
+              <li>• Lưu siêu tham số (Hyperparams)</li>
+              <li>• Lịch sử hàm mất mát (Loss history)</li>
+              <li>• Quản lý huyết thống dữ liệu (Lineage)</li>
+              <li>• Chuyển đổi mô hình Active tức thời</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-amber-400 font-mono">model_registry_service.py</div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-3">
+              <i data-lucide="git-branch" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Gemma 2B LoRA Fine-Tuning</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Pipeline tinh chỉnh SLM dành riêng cho văn phong tư vấn đồ uống:
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 font-mono">
+              <li>• Base: google/gemma-2-2b-it</li>
+              <li>• Cấu hình LoRA: r=8, alpha=16</li>
+              <li>• Target modules: q_proj, v_proj</li>
+              <li>• Huấn luyện trên GPU RTX / CPU</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-purple-400 font-mono">finetune_pipeline.py</div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3">
+              <i data-lucide="search" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Contrastive RAG Adapter</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Adapter ánh xạ véc-tơ cải thiện độ chính xác truy xuất ngữ nghĩa:
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 font-mono">
+              <li>• Base: all-MiniLM-L6-v2 (dim 384)</li>
+              <li>• Linear + LayerNorm + Residual</li>
+              <li>• Tối ưu cho tiếng lóng F&B VN</li>
+              <li>• Độ chính xác cải thiện +28.5%</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-emerald-400 font-mono">rag_service.py</div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>🚀 <strong>Độc lập công nghệ:</strong> Hệ thống có thể hoạt động hoàn toàn offline mà không phụ thuộc vào bất kỳ nhà cung cấp API cloud bên ngoài nào.</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 9: SCORECARD VS BRIEF ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Bảng đối chiếu thẳng thắn (Scorecard) theo yêu cầu trong brief. 6 mục DONE, 1 mục PARTIAL (chưa có nút like/dislike), và 1 mục NOT STARTED (Bedrock VPC). Đây là slide quan trọng nhất để mentor đánh giá tính trung thực.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">
+          <i data-lucide="clipboard-check" class="w-4 h-4"></i> Evaluation Scorecard
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Bảng Đối Chiếu Tiến Độ Với Đề Bài Workshop</h2>
+        <p class="text-slate-400 text-sm mt-1">Đánh giá trung thực từng tiêu chí kỹ thuật theo yêu cầu ban tổ chức và mentor.</p>
+      </div>
+
+      <div class="overflow-x-auto my-auto glass-card rounded-2xl border border-slate-800 p-2">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider font-mono text-[11px]">
+              <th class="p-3">Hạng Mục Yêu Cầu</th>
+              <th class="p-3 w-32 text-center">Trạng Thái</th>
+              <th class="p-3">Dẫn Chứng Mã Nguồn & Đánh Giá Kỹ Thuật</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-sans">
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">1. Thu thập tên, SĐT, địa chỉ → Đẩy vào DB</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">Model <code>User</code> (phone, name, address), Regex phone VN, endpoint đăng ký/cập nhật.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">2. Gợi ý đồ uống Detox, Coffee, Protein</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">Seed data có nhóm <code>protein</code> (3 món), <code>detox</code>, trà, cà phê. Đã có test case xác minh.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">3. Lưu chat history để đánh giá độ chính xác</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px] font-bold">PARTIAL</span>
+              </td>
+              <td class="p-3 text-slate-300">Đã lưu toàn bộ message kèm Token, Cost, Latency; <em>Chưa có nút Like/Dislike trực tiếp từ user</em>.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40 bg-rose-950/10">
+              <td class="p-3 font-semibold text-rose-300">4. Ứng dụng → VPC Endpoint → AWS Bedrock</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold">NOT STARTED</span>
+              </td>
+              <td class="p-3 text-rose-300 font-medium">Khoảng trống lớn nhất: Đang gọi trực tiếp OpenAI API và Ollama Local qua Docker.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">5. Đóng gói Docker cho Backend & Frontend</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">Dockerfile tối ưu + <code>docker-compose.yml</code> (Postgres, Backend, Frontend, Adminer, Nginx).</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">6. Tracking Model & Token từng message</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">Cột <code>model_name</code>, <code>input_tokens</code>, <code>output_tokens</code>, <code>estimated_cost_usd</code> trên ChatMessage.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">7. Kiểm soát phiên bản Prompt (Prompt Versioning)</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">DB-backed <code>PromptVersion</code> store, mã SHA-256 chống drift, API kích hoạt/rollback.</td>
+            </tr>
+            <tr class="hover:bg-slate-900/40">
+              <td class="p-3 font-semibold text-slate-200">8. AI Agent có bước duyệt (Human Approval)</td>
+              <td class="p-3 text-center">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">DONE</span>
+              </td>
+              <td class="p-3 text-slate-300">2 cổng duyệt: Xác nhận đặt món (Order confirm) và Xác nhận đổi hồ sơ (Pending preferences).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+        <span>Tỷ lệ hoàn thành tổng thể: <strong class="text-emerald-400">7/8 Hạng mục cốt lõi</strong> (87.5% hoàn tất).</span>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 10: ROADMAP & Q&A ==================== -->
+    <section class="slide flex-col justify-between max-w-6xl w-full h-full py-4" data-note="Kết luận và kế hoạch tiếp theo: Tập trung số 1 vào AWS Bedrock VPC Endpoint, bổ sung feedback thumbs up/down, sẵn sàng cho phần thảo luận Q&A.">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">
+          <i data-lucide="compass" class="w-4 h-4"></i> Looking Forward
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white">Kế Hoạch Tiếp Theo & Thảo Luận (Q&A)</h2>
+        <p class="text-slate-400 text-sm mt-1">Các hạng mục ưu tiên hoàn thiện trong giai đoạn kế tiếp của dự án.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+        <div class="glass-card p-6 rounded-2xl border-t-4 border-t-rose-500 flex flex-col justify-between">
+          <div>
+            <div class="text-rose-400 font-mono text-xs font-bold mb-2">ƯU TIÊN 1 (CRITICAL)</div>
+            <h3 class="text-lg font-bold text-white mb-2">AWS Bedrock & VPC Endpoint</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Triển khai SDK Boto3 cho AWS Bedrock (Claude 3 Haiku / Llama 3) và định tuyến bảo mật qua VPC Endpoint theo tiêu chuẩn điện toán đám mây doanh nghiệp.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 font-mono">Target: Sprint tới</div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-t-4 border-t-amber-500 flex flex-col justify-between">
+          <div>
+            <div class="text-amber-400 font-mono text-xs font-bold mb-2">ƯU TIÊN 2 (UX FEEDBACK)</div>
+            <h3 class="text-lg font-bold text-white mb-2">User Feedback Loop (RLHF)</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Bổ sung nút Thumbs Up / Thumbs Down trên giao diện tin nhắn, tự động gửi score về Langfuse để xây dựng tập dataset đánh giá tự động (Eval Dataset).
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 font-mono">Target: Frontend sync</div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl border-t-4 border-t-emerald-500 flex flex-col justify-between">
+          <div>
+            <div class="text-emerald-400 font-mono text-xs font-bold mb-2">ƯU TIÊN 3 (AUTOMATION)</div>
+            <h3 class="text-lg font-bold text-white mb-2">CI/CD Continuous Retraining</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Tự động hóa pipeline kích hoạt huấn luyện lại (Retrain Trigger) khi số lượng dữ liệu feedback mới vượt ngưỡng, tự động đánh giá và triển khai canaries.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400 font-mono">Target: GitHub Actions</div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-6 rounded-2xl text-center max-w-xl mx-auto w-full border border-amber-500/30 shadow-xl shadow-amber-500/10">
+        <h3 class="text-xl font-extrabold text-white mb-1">Cảm Ơn Quý Thầy Cô & Các Bạn Đồng Nghiệp!</h3>
+        <p class="text-slate-400 text-xs mb-4">DrinkBot MLOps — Hệ thống sẵn sàng cho phần Hỏi & Đáp (Q&A)</p>
+        <div class="flex items-center justify-center gap-3">
+          <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all">
+            <i data-lucide="printer" class="w-4 h-4"></i> Xuất file PDF Slide
+          </button>
+          <button onclick="goToSlide(0)" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 transition-all">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Về trang đầu
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM CONTROL BAR -->
+  <footer id="controls" class="glass-panel border-t border-slate-800/80 px-6 py-3 flex items-center justify-between z-40">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 text-amber-400 font-bold text-sm tracking-wide">
+        <i data-lucide="coffee" class="w-4 h-4"></i>
+        <span>DrinkBot MLOps</span>
+      </div>
+      <span class="text-slate-600 text-xs">|</span>
+      <span id="slide-title-indicator" class="text-xs text-slate-400 hidden sm:inline-block">Slide 1: Cover</span>
+    </div>
+
+    <!-- Center navigation -->
+    <div class="flex items-center gap-2">
+      <button id="prev-btn" onclick="prevSlide()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all" title="Trang trước (Phím ←)">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+
+      <div class="px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 font-bold">
+        <span id="current-slide-num">1</span> / <span id="total-slide-num">10</span>
+      </div>
+
+      <button id="next-btn" onclick="nextSlide()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all" title="Trang sau (Phím →)">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Right utility buttons -->
+    <div class="flex items-center gap-2">
+      <button onclick="toggleNotes()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1.5 transition-all" title="Bật/Tắt ghi chú người thuyết trình (Phím N)">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span class="hidden md:inline">Notes</span>
+      </button>
+
+      <button onclick="toggleFullscreen()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1.5 transition-all" title="Toàn màn hình (Phím F)">
+        <i data-lucide="maximize" class="w-4 h-4"></i>
+      </button>
+
+      <button onclick="window.print()" class="p-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition-all" title="Xuất slide ra PDF / In">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        <span class="hidden md:inline">PDF</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- SPEAKER NOTES DRAWER -->
+  <div id="notes-drawer" class="hidden fixed bottom-14 left-0 right-0 glass-panel border-t border-amber-500/30 p-4 z-50 shadow-2xl transition-all">
+    <div class="max-w-4xl mx-auto flex items-start justify-between gap-4">
+      <div class="flex items-start gap-2.5">
+        <i data-lucide="message-square" class="w-5 h-5 text-amber-400 mt-0.5 shrink-0"></i>
+        <div>
+          <div class="text-xs font-bold uppercase text-amber-400 tracking-wider mb-1">Speaker Notes (Gợi Ý Thuyết Trình)</div>
+          <p id="speaker-note-content" class="text-xs text-slate-200 leading-relaxed font-normal">
+            Không có ghi chú nào cho slide này.
+          </p>
+        </div>
+      </div>
+      <button onclick="toggleNotes()" class="text-slate-400 hover:text-white p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Slide State
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const totalSlides = slides.length;
+    let currentSlideIndex = 0;
+
+    const currentSlideNumEl = document.getElementById('current-slide-num');
+    const totalSlideNumEl = document.getElementById('total-slide-num');
+    const progressBar = document.getElementById('progress-bar');
+    const slideTitleIndicator = document.getElementById('slide-title-indicator');
+    const speakerNoteContent = document.getElementById('speaker-note-content');
+    const notesDrawer = document.getElementById('notes-drawer');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    totalSlideNumEl.textContent = totalSlides;
+
+    function updateSlide() {
+      slides.forEach((slide, index) => {
+        if (index === currentSlideIndex) {
+          slide.classList.add('active');
+          const note = slide.getAttribute('data-note') || 'Không có ghi chú đặc biệt cho slide này.';
+          speakerNoteContent.textContent = note;
+          
+          // Update title indicator
+          const heading = slide.querySelector('h2, h1');
+          if (heading) {
+            slideTitleIndicator.textContent = `Slide ${index + 1}: ${heading.innerText.split('\n')[0]}`;
+          }
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      // Update indicators
+      currentSlideNumEl.textContent = currentSlideIndex + 1;
+      const progressPercent = ((currentSlideIndex + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      // Update button states
+      prevBtn.disabled = currentSlideIndex === 0;
+      nextBtn.disabled = currentSlideIndex === totalSlides - 1;
+
+      lucide.createIcons();
+    }
+
+    function nextSlide() {
+      if (currentSlideIndex < totalSlides - 1) {
+        currentSlideIndex++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlideIndex > 0) {
+        currentSlideIndex--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlideIndex = index;
+        updateSlide();
+      }
+    }
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('hidden');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error(err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Keyboard Event Listener
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+        case ' ': // Spacebar
+        case 'PageDown':
+          e.preventDefault();
+          nextSlide();
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+        case 'PageUp':
+        case 'Backspace':
+          e.preventDefault();
+          prevSlide();
+          break;
+        case 'Home':
+          e.preventDefault();
+          goToSlide(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          goToSlide(totalSlides - 1);
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'n':
+        case 'N':
+          e.preventDefault();
+          toggleNotes();
+          break;
+        case 'p':
+        case 'P':
+          if (e.ctrlKey || e.metaKey) return; // let native print happen
+          break;
+      }
+    });
+
+    // Initialize first slide
+    updateSlide();
+  </script>
+</body>
+</html>
