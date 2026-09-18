@@ -42,8 +42,27 @@ async def clear_traces():
 
 
 @router.get("/prompts")
-async def get_prompts():
-    """Get all prompt versions from registry with active status and hashes."""
+async def get_prompts(db: AsyncSession = Depends(get_db)):
+    """Get all prompt versions from registry and database with active status and hashes."""
+    from app.models import PromptVersion
+    from sqlalchemy import select
+
+    try:
+        db_rows = list(await db.scalars(select(PromptVersion).order_by(PromptVersion.id)))
+        for r in db_rows:
+            if r.version not in prompt_service._REGISTRY:
+                prompt_service.register_new_prompt(
+                    version=r.version,
+                    template=r.template,
+                    description=f"Database prompt v{r.version}",
+                    label="production" if r.is_active else "staged",
+                    activate=r.is_active,
+                )
+            elif r.is_active:
+                prompt_service.activate_prompt_version(r.version)
+    except Exception:
+        pass
+
     prompts = prompt_service.get_all_prompts()
     active = prompt_service.get_active_prompt()
     return {
@@ -53,10 +72,37 @@ async def get_prompts():
 
 
 @router.post("/prompts/activate")
-async def activate_prompt(payload: PromptActivateRequest):
+async def activate_prompt(payload: PromptActivateRequest, db: AsyncSession = Depends(get_db)):
     """Activate or rollback to a prompt version dynamically without redeploying code."""
     try:
         updated = prompt_service.activate_prompt_version(payload.version)
+
+        # Synchronize immediately into PostgreSQL PromptVersion table
+        from app.models import PromptVersion
+        from sqlalchemy import select, update as sa_update
+
+        # Deactivate all active rows in DB for this prompt name
+        await db.execute(
+            sa_update(PromptVersion).where(PromptVersion.name == updated.name).values(is_active=False)
+        )
+
+        row = await db.scalar(
+            select(PromptVersion).where(PromptVersion.name == updated.name, PromptVersion.version == updated.version)
+        )
+        if row:
+            row.is_active = True
+            row.template = updated.template
+            row.prompt_hash = updated.prompt_hash
+        else:
+            db.add(PromptVersion(
+                name=updated.name,
+                version=updated.version,
+                template=updated.template,
+                prompt_hash=updated.prompt_hash,
+                is_active=True,
+            ))
+        await db.commit()
+
         return {
             "status": "activated",
             "active_version": updated.version,
@@ -67,7 +113,7 @@ async def activate_prompt(payload: PromptActivateRequest):
 
 
 @router.post("/prompts")
-async def create_prompt(payload: PromptCreateRequest):
+async def create_prompt(payload: PromptCreateRequest, db: AsyncSession = Depends(get_db)):
     """Register a new prompt version for A/B testing or experimentation."""
     item = prompt_service.register_new_prompt(
         version=payload.version,
@@ -76,6 +122,36 @@ async def create_prompt(payload: PromptCreateRequest):
         label=payload.label,
         activate=payload.activate,
     )
+
+    # Sync into DB table PromptVersion
+    try:
+        from app.models import PromptVersion
+        from sqlalchemy import select, update as sa_update
+
+        if payload.activate:
+            await db.execute(
+                sa_update(PromptVersion).where(PromptVersion.name == item.name).values(is_active=False)
+            )
+        row = await db.scalar(
+            select(PromptVersion).where(PromptVersion.name == item.name, PromptVersion.version == item.version)
+        )
+        if row:
+            row.template = item.template
+            row.prompt_hash = item.prompt_hash
+            if payload.activate:
+                row.is_active = True
+        else:
+            db.add(PromptVersion(
+                name=item.name,
+                version=item.version,
+                template=item.template,
+                prompt_hash=item.prompt_hash,
+                is_active=payload.activate,
+            ))
+        await db.commit()
+    except Exception:
+        pass
+
     return {"status": "registered", "prompt": item}
 
 

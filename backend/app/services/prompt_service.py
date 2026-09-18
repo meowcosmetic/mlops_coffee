@@ -94,10 +94,21 @@ def _init_default_prompts():
     _REGISTRY["1.1.0"] = PromptVersionItem(
         name="drink-assistant-system",
         version="1.1.0",
-        label="production",
+        label="staged",
         template=V1_1_0_TEMPLATE,
         description="Phiên bản chuẩn Production - Hỗ trợ đầy đủ 3 tools & kiểm tra dị ứng nghiêm ngặt",
         prompt_hash=_hash_template(V1_1_0_TEMPLATE),
+        is_active=False,
+    )
+
+    from app.llm_versions import DEFAULT_SYSTEM_PROMPT_NAME, DEFAULT_SYSTEM_PROMPT_TEMPLATE, DEFAULT_SYSTEM_PROMPT_VERSION
+    _REGISTRY["1.2.0"] = PromptVersionItem(
+        name=DEFAULT_SYSTEM_PROMPT_NAME,
+        version=DEFAULT_SYSTEM_PROMPT_VERSION,
+        label="production",
+        template=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+        description="Phiên bản chuẩn Production có Human Confirmation cho đặt món & hồ sơ",
+        prompt_hash=_hash_template(DEFAULT_SYSTEM_PROMPT_TEMPLATE),
         is_active=True,
     )
 
@@ -178,9 +189,12 @@ def get_prompt_by_version(version: str | None) -> PromptVersionItem | None:
 
 def activate_prompt_version(version: str) -> PromptVersionItem:
     """Set a specific prompt version as active (instant rollback / A/B switch)."""
+    global _LF_CACHED_REMOTE_PROMPT
     _init_default_prompts()
     if version not in _REGISTRY:
         raise ValueError(f"Prompt version '{version}' not found in registry.")
+
+    _LF_CACHED_REMOTE_PROMPT = None
 
     for k, item in _REGISTRY.items():
         item.is_active = (k == version)

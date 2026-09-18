@@ -52,7 +52,11 @@ async def chat(
     history = await _recent_history(db, user.id)
     db.add(ChatMessage(user_id=user.id, role="user", content=payload.message))
 
-    result = await agent.run_chat_turn(db, user, prefs, history, payload.message)
+    result = await agent.run_chat_turn(
+        db, user, prefs, history, payload.message,
+        prompt_version=payload.prompt_version,
+        model_name=payload.model_name,
+    )
 
     db.add(ChatMessage(
         user_id=user.id,

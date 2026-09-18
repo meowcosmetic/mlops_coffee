@@ -62,6 +62,8 @@ def stub_agent_model(monkeypatch, responses: list[AIMessage]) -> FakeToolModel:
 def no_llm(monkeypatch):
     """Tests never hit a real LLM: default to a no-op fake chat model."""
     monkeypatch.setattr(llm, "get_chat_model", lambda *a, **kw: FakeToolModel())
+    from app.config import settings
+    monkeypatch.setattr(settings, "admin_api_key", None)
 
 
 

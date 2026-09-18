@@ -105,6 +105,8 @@ class MenuItemOut(MenuItemBase):
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
+    prompt_version: str | None = None
+    model_name: str | None = None
 
 
 class Recommendation(BaseModel):

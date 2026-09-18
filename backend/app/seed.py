@@ -153,19 +153,36 @@ SAMPLE_DRINKS = [
 
 
 async def seed_prompt(session) -> None:
-    try:
-        await prompts.get_active_prompt(session, name=DEFAULT_SYSTEM_PROMPT_NAME)
-        print("Active prompt already seeded, skipping.")
-    except LookupError:
-        await prompts.create_version(
-            session,
-            name=DEFAULT_SYSTEM_PROMPT_NAME,
-            template=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
-            version=DEFAULT_SYSTEM_PROMPT_VERSION,
-            activate=True,
+    from app.services.prompt_service import get_all_prompts
+    from app.models import PromptVersion
+
+    active_row = await session.scalar(
+        select(PromptVersion).where(
+            PromptVersion.name == DEFAULT_SYSTEM_PROMPT_NAME,
+            PromptVersion.is_active.is_(True),
         )
-        await session.commit()
-        print("Seeded initial prompt version.")
+    )
+
+    for p in get_all_prompts():
+        row = await session.scalar(
+            select(PromptVersion).where(
+                PromptVersion.name == p["name"],
+                PromptVersion.version == p["version"],
+            )
+        )
+        if not row:
+            should_activate = p["is_active"] if not active_row else False
+            session.add(
+                PromptVersion(
+                    name=p["name"],
+                    version=p["version"],
+                    template=p["template"],
+                    prompt_hash=p["prompt_hash"],
+                    is_active=should_activate,
+                )
+            )
+    await session.commit()
+    print("Seeded and verified prompt versions.")
 
 
 async def seed() -> None:

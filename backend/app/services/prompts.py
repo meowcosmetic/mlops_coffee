@@ -48,6 +48,13 @@ async def activate_version(db: AsyncSession, version_id: int) -> PromptVersion:
     )
     row.is_active = True
     await db.flush()
+
+    try:
+        from app.services import prompt_service
+        prompt_service.activate_prompt_version(row.version)
+    except Exception:
+        pass
+
     return row
 
 
