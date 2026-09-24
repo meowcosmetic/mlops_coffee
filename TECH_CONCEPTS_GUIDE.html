@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài Liệu: Tech Spec, ADR, NFR & Risk Register</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.55;
+      color: #222;
+      background: #fafafa;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      border-bottom: 2px solid #333;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      color: #111;
+    }
+    h2 {
+      font-size: 1.25rem;
+      color: #0f3460;
+      margin-top: 28px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 16px 0 6px;
+      color: #2c5282;
+    }
+    p {
+      margin: 6px 0 10px;
+    }
+    ul, ol {
+      margin: 6px 0 12px 22px;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 3px;
+      background: #edf2f7;
+      color: #4a5568;
+    }
+    .box {
+      background: #f7fafc;
+      border-left: 4px solid #4a5568;
+      padding: 10px 14px;
+      margin: 10px 0 14px;
+      font-size: 0.95rem;
+    }
+    .box-example {
+      border-left-color: #3182ce;
+      background: #ebf8ff;
+    }
+    .box-alert {
+      border-left-color: #e53e3e;
+      background: #fff5f5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #cbd5e0;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #edf2f7;
+      color: #2d3748;
+      font-weight: 600;
+    }
+    code {
+      font-family: Consolas, monospace;
+      background: #edf2f7;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    @media print {
+      body { background: #fff; max-width: 100%; margin: 0; }
+      .box { break-inside: avoid; }
+      table { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SỔ TAY KỸ THUẬT: TECH SPEC, ADR, NFR &amp; RISK REGISTER</h1>
+  <p><em>Tài liệu tổng hợp ngắn gọn các khái niệm kiến trúc phần mềm cốt lõi, kèm ví dụ thực tế trong dự án DrinkBot MLOps.</em></p>
+
+  <!-- MỤC 1: TECH SPEC -->
+  <h2>1. TECH SPEC (Technical Specification - Đặc tả kỹ thuật)</h2>
+  <p><strong>Bản chất:</strong> Là bản vẽ thiết kế kỹ thuật do Software Engineer / Tech Lead viết <strong>trước khi code</strong>, giải quyết câu hỏi: <em>"Làm tính năng này như thế nào về mặt kỹ thuật?"</em></p>
+  
+  <h3>Cấu trúc chuẩn của một Tech Spec:</h3>
+  <ol>
+    <li><strong>Overview &amp; Goals:</strong> Bối cảnh bài toán, mục tiêu và những gì <em>không</em> nằm trong phạm vi (Non-goals).</li>
+    <li><strong>System Architecture:</strong> Sơ đồ luồng xử lý (Data flow), các service tham gia.</li>
+    <li><strong>Data Schema:</strong> Cấu trúc bảng Database, kiểu dữ liệu, quan hệ khóa ngoại (Foreign Keys).</li>
+    <li><strong>API Contracts:</strong> Chi tiết các endpoint (URL, Method, Request/Response payload).</li>
+    <li><strong>Security &amp; Safety:</strong> Xác thực, phân quyền, các lớp bảo vệ dữ liệu.</li>
+    <li><strong>Rollout &amp; Monitoring:</strong> Cách deploy, metrics cần đo, phương án rollback khi lỗi.</li>
+  </ol>
+
+  <div class="box box-example">
+    <strong>💡 Ví dụ thực tế trong DrinkBot:</strong><br>
+    Đề bài yêu cầu: <em>"Chatbot nhận diện dị ứng và không gợi ý món độc hại"</em>.<br>
+    &rarr; <strong>Tech Spec</strong> sẽ mô tả cụ thể:
+    <ul>
+      <li>Viết hàm Python <code>filter_allergens()</code> mở rộng từ khóa dị nguyên (ví dụ: <code>dairy</code> &rarr; <code>milk, cream, yogurt, whey</code>).</li>
+      <li>Lọc bỏ các món chứa dị nguyên ngay trong backend trước khi đưa vào danh sách context cho LLM.</li>
+      <li>Khi đặt hàng, hàm <code>order</code> kiểm tra lại một lần nữa bằng code Python trước khi tạo bản ghi vào DB.</li>
+    </ul>
+  </div>
+
+  <!-- MỤC 2: ADR -->
+  <h2>2. ADR (Architecture Decision Record - Bản ghi quyết định kiến trúc)</h2>
+  <p><strong>Bản chất:</strong> Là văn bản ghi lại <strong>lý do tại sao chọn giải pháp này mà bỏ giải pháp khác</strong>, để tránh việc sau vài tháng trong team không ai nhớ vì sao lại làm như vậy.</p>
+
+  <h3>Mẫu một tài liệu ADR tiêu chuẩn:</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Thành phần</th>
+        <th>Ý nghĩa</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Title (Tiêu đề)</strong></td>
+        <td>Định danh ngắn gọn, thường đánh số: <code>ADR-01: ...</code></td>
+      </tr>
+      <tr>
+        <td><strong>Status (Trạng thái)</strong></td>
+        <td><code>Proposed</code> (Đề xuất), <code>Accepted</code> (Đã duyệt), <code>Deprecated</code> (Hết hạn), hoặc <code>Superseded</code> (Bị thay thế).</td>
+      </tr>
+      <tr>
+        <td><strong>Context (Bối cảnh)</strong></td>
+        <td>Vấn đề kỹ thuật hoặc bài toán kinh doanh đang phải đối mặt là gì?</td>
+      </tr>
+      <tr>
+        <td><strong>Decision (Quyết định)</strong></td>
+        <td>Giải pháp công nghệ được chọn là gì?</td>
+      </tr>
+      <tr>
+        <td><strong>Trade-offs (Hệ quả / Đánh đổi)</strong></td>
+        <td>Ưu điểm nhận được là gì? Nhược điểm hoặc gánh nặng kỹ thuật phải chấp nhận là gì?</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="box box-example">
+    <strong>💡 Ví dụ ADR mẫu của DrinkBot:</strong><br>
+    <strong>ADR-02: Quản lý Prompt động qua Database thay vì Hardcode trong mã nguồn.</strong>
+    <ul>
+      <li><strong>Context:</strong> Trước đây Prompt được viết cứng trong code Python. Mỗi lần sửa prompt hay đổi văn phong phải commit code và redeploy container, gây gián đoạn hệ thống.</li>
+      <li><strong>Decision:</strong> Xây dựng bảng <code>PromptVersion</code> trong PostgreSQL, tích hợp hash SHA256 và endpoint <code>POST /api/telemetry/prompts/activate</code> để hot-swap prompt runtime.</li>
+      <li><strong>Consequences:</strong>
+        <ul>
+          <li><em>Ưu điểm:</em> Đổi prompt hoặc rollback tức thì trong 1 giây, hỗ trợ A/B testing không downtime.</li>
+          <li><em>Đánh đổi:</em> Phải thêm logic truy vấn DB hoặc cache in-memory trước mỗi lượt chat.</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MỤC 3: NFR -->
+  <h2>3. NFR (Non-Functional Requirements - Yêu cầu phi chức năng)</h2>
+  <p><strong>Bản chất:</strong> Quy định các tiêu chuẩn về <strong>chất lượng và vận hành</strong> của hệ thống (chạy nhanh không, an toàn không, chịu tải thế nào), thay vì tính năng (làm được nút gì).</p>
+
+  <h3>Các nhóm NFR phổ biến &amp; Chỉ số thực tế trong dự án:</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">Nhóm NFR</th>
+        <th style="width: 38%;">Tiêu chuẩn đo lường</th>
+        <th>Triển khai thực tế trong DrinkBot</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Performance<br>(Hiệu năng)</strong></td>
+        <td>Latency phản hồi, throughput (RPS).</td>
+        <td>Thời gian phản hồi LLM trung bình &lt; 2.5s; API nội bộ &lt; 150ms. Đo lường qua Langfuse Tracing.</td>
+      </tr>
+      <tr>
+        <td><strong>Safety &amp; Accuracy<br>(Độ chính xác)</strong></td>
+        <td>Tỷ lệ vi phạm an toàn = 0%.</td>
+        <td><strong>Allergen Guardrail:</strong> 100% test case dị ứng phải Pass trong bộ Evals Benchmark trước khi release.</td>
+      </tr>
+      <tr>
+        <td><strong>Security<br>(Bảo mật)</strong></td>
+        <td>Xác thực, phân quyền, mã hóa.</td>
+        <td>Xác thực phiên qua JWT token; Validate số điện thoại định dạng VN; Các endpoint quản trị Prompt yêu cầu quyền Admin.</td>
+      </tr>
+      <tr>
+        <td><strong>Availability<br>(Độ sẵn sàng)</strong></td>
+        <td>Khả năng chịu lỗi khi bên thứ 3 sập.</td>
+        <td>Tự động fallback sang thuật toán Heuristic ranking nếu OpenAI API timeout hoặc gặp sự cố mạng.</td>
+      </tr>
+      <tr>
+        <td><strong>Observability<br>(Khả năng quan sát)</strong></td>
+        <td>Khả năng theo dõi chi phí &amp; hành vi.</td>
+        <td>Ghi nhận đầy đủ: Request ID, Model, Prompt Hash, Input/Output Tokens, Chi phí USD cho từng tin nhắn.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- MỤC 4: RISK REGISTER -->
+  <h2>4. RISK REGISTER (Sổ đăng ký &amp; Quản trị rủi ro)</h2>
+  <p><strong>Bản chất:</strong> Là bảng thống kê toàn bộ những rủi ro kỹ thuật và vận hành có thể xảy ra trong dự án, kèm mức độ nghiêm trọng và <strong>kế hoạch phòng ngừa / xử lý (Mitigation Plan)</strong>.</p>
+
+  <h3>Bảng Risk Register thực tế của hệ thống DrinkBot MLOps:</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Mã</th>
+        <th>Rủi ro tiềm ẩn (Risk)</th>
+        <th>Xác suất</th>
+        <th>Ảnh hưởng</th>
+        <th>Giải pháp phòng ngừa &amp; Ứng phó (Mitigation)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>R-01</strong></td>
+        <td>LLM bị hallucination gợi ý món chứa chất dị ứng của khách</td>
+        <td><span class="badge">Trung bình</span></td>
+        <td><span class="badge" style="background:#fed7d7; color:#9b2c2c;">Nghiêm trọng</span></td>
+        <td><strong>Code-level Filter:</strong> Không tin tưởng LLM. Python backend chủ động lọc sạch menu trước khi gửi vào LLM prompt.</td>
+      </tr>
+      <tr>
+        <td><strong>R-02</strong></td>
+        <td>Khách vô tình bị trừ tiền hoặc chốt đơn nhầm do AI hiểu sai</td>
+        <td><span class="badge">Trung bình</span></td>
+        <td><span class="badge" style="background:#fed7d7; color:#9b2c2c;">Nghiêm trọng</span></td>
+        <td><strong>Human-in-the-Loop Gate:</strong> Tool <code>order</code> chỉ tạo đơn ở trạng thái <code>Pending</code>. Bắt buộc người dùng bấm xác nhận mới tạo đơn <code>Placed</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>R-03</strong></td>
+        <td>Chi phí OpenAI API vượt ngân sách do bot bị spam hoặc lặp vô tận</td>
+        <td><span class="badge">Cao</span></td>
+        <td><span class="badge" style="background:#feebc8; color:#744210;">Trung bình</span></td>
+        <td>Giới hạn vòng lặp tool calling tối đa 4 lượt (bounded loop); Ghi nhận chi phí realtime qua Langfuse Telemetry.</td>
+      </tr>
+      <tr>
+        <td><strong>R-04</strong></td>
+        <td>Prompt mới cập nhật làm giảm chất lượng hội thoại (Prompt Drift)</td>
+        <td><span class="badge">Trung bình</span></td>
+        <td><span class="badge" style="background:#feebc8; color:#744210;">Trung bình</span></td>
+        <td>Gắn mã băm SHA256 cho mỗi phiên bản; Chạy bộ <strong>Centralized Evals Benchmark</strong> trước khi bấm nút Activate trên production.</td>
+      </tr>
+      <tr>
+        <td><strong>R-05</strong></td>
+        <td>OpenAI API mất kết nối / nghẽn mạng toàn cầu</td>
+        <td><span class="badge">Thấp</span></td>
+        <td><span class="badge" style="background:#fed7d7; color:#9b2c2c;">Cao</span></td>
+        <td>Xây dựng fallback sang mô hình cục bộ (Ollama SLM) hoặc rule-based recommender để chatbot không bị crash.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- TỔNG KẾT GHI NHỚ -->
+  <h2>5. BẢNG TỔNG KẾT ĐỂ NHỚ NHANH</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Thuật ngữ</th>
+        <th style="width: 35%;">Ý nghĩa cốt lõi</th>
+        <th>Cách trả lời nhanh khi được hỏi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Tech Spec</strong></td>
+        <td>Bản vẽ kỹ thuật chi tiết của hệ thống.</td>
+        <td><em>"Tài liệu mô tả chi tiết kiến trúc, DB và API trước khi code."</em></td>
+      </tr>
+      <tr>
+        <td><strong>ADR</strong></td>
+        <td>Bản ghi lý do ra quyết định kỹ thuật.</td>
+        <td><em>"Ghi lại tại sao nhóm chọn giải pháp này và chấp nhận đánh đổi gì."</em></td>
+      </tr>
+      <tr>
+        <td><strong>NFR</strong></td>
+        <td>Yêu cầu phi chức năng (Chất lượng hệ thống).</td>
+        <td><em>"Tiêu chuẩn về tốc độ, an toàn, bảo mật và chi phí vận hành."</em></td>
+      </tr>
+      <tr>
+        <td><strong>Risk Register</strong></td>
+        <td>Sổ theo dõi rủi ro và kế hoạch phòng cháy.</td>
+        <td><em>"Bảng dự báo các sự cố có thể xảy ra và phương án giải quyết cụ thể."</em></td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

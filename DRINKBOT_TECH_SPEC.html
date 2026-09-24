@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technical Specification (Tech Spec) - DrinkBot MLOps Platform</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #1e3a8a;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --bg: #fcfcfc;
+      --card-bg: #f8fafc;
+      --border: #cbd5e1;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      max-width: 980px;
+      margin: 25px auto;
+      padding: 0 24px;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin: 0;
+      color: var(--primary);
+      line-height: 1.25;
+    }
+    .lang-switcher {
+      display: inline-flex;
+      background: #e2e8f0;
+      border-radius: 6px;
+      padding: 3px;
+      gap: 3px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h2 {
+      font-size: 1.35rem;
+      color: var(--secondary);
+      margin-top: 32px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin: 18px 0 8px;
+      color: #0f172a;
+    }
+    p {
+      margin: 6px 0 10px;
+    }
+    .vi-text {
+      color: #1e293b;
+    }
+    .en-text {
+      color: #334155;
+      font-style: normal;
+    }
+    body.show-both .en-text {
+      color: #475569;
+      font-size: 0.95em;
+      border-left: 2px solid #94a3b8;
+      padding-left: 10px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+    body.mode-vi .en-text {
+      display: none !important;
+    }
+    body.mode-en .vi-text {
+      display: none !important;
+    }
+    ul, ol {
+      margin: 6px 0 14px 22px;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #334155;
+    }
+    .badge-done { background: #dcfce7; color: #166534; }
+    .badge-partial { background: #fef3c7; color: #92400e; }
+    .badge-high { background: #fee2e2; color: #991b1b; }
+    .badge-med { background: #fef3c7; color: #92400e; }
+    .badge-low { background: #e0f2fe; color: #075985; }
+
+    .meta-table {
+      width: 100%;
+      margin: 12px 0 20px;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    .meta-table td {
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .meta-table td:first-child {
+      font-weight: 600;
+      width: 28%;
+      background: #f8fafc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 0.88rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    pre, code {
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.88rem;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: #0f172a;
+    }
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      line-height: 1.45;
+      margin: 10px 0 14px;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .box-adr {
+      background: #f8fafc;
+      border-left: 4px solid var(--primary);
+      padding: 12px 16px;
+      margin: 14px 0 18px;
+      border-radius: 0 4px 4px 0;
+    }
+    @media print {
+      body { background: #fff; max-width: 100%; margin: 0; }
+      .lang-switcher { display: none; }
+      .box-adr, table, pre { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body class="show-both">
+
+  <div class="header-bar">
+    <div>
+      <h1>
+        <span class="vi-text">ĐẶC TẢ KỸ THUẬT: DRINKBOT MLOPS PLATFORM</span>
+        <span class="en-text">TECHNICAL SPECIFICATION: DRINKBOT MLOPS PLATFORM</span>
+      </h1>
+      <p style="margin: 4px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+        <span class="vi-text">Tài liệu kiến trúc hệ thống, ADR, NFR và Quản trị rủi ro</span>
+        <span class="en-text">System Architecture, ADRs, NFRs &amp; Risk Register</span>
+      </p>
+    </div>
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('both')">🌐 Song ngữ / Both</button>
+      <button class="lang-btn" onclick="setLang('vi')">🇻🇳 Tiếng Việt</button>
+      <button class="lang-btn" onclick="setLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+
+  <table class="meta-table">
+    <tr>
+      <td>
+        <span class="vi-text">Hệ thống</span><span class="en-text">System Name</span>
+      </td>
+      <td><strong>DrinkBot MLOps Platform</strong> (F&amp;B Chatbot &amp; MLOps Observability Hub)</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="vi-text">Tác giả / Nhóm</span><span class="en-text">Authors / Team</span>
+      </td>
+      <td>Engineering Team (TMA MLOps Course 2026)</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="vi-text">Phiên bản tài liệu</span><span class="en-text">Doc Version</span>
+      </td>
+      <td>1.0.0 (September 2026)</td>
+    </tr>
+    <tr>
+      <td>
+        <span class="vi-text">Trạng thái</span><span class="en-text">Status</span>
+      </td>
+      <td><span class="badge badge-done">Active / In-Production</span></td>
+    </tr>
+    <tr>
+      <td>
+        <span class="vi-text">Ngăn xếp công nghệ</span><span class="en-text">Tech Stack</span>
+      </td>
+      <td>FastAPI, SQLAlchemy Async, LangChain, PostgreSQL 16, Langfuse Telemetry, Docker, React Vite</td>
+    </tr>
+  </table>
+
+  <!-- SECTION 1 -->
+  <h2>
+    <span class="vi-text">1. TỔNG QUAN DỰ ÁN &amp; PHẠM VI</span>
+    <span class="en-text">1. PROJECT OVERVIEW &amp; SCOPE</span>
+  </h2>
+  
+  <h3>
+    <span class="vi-text">1.1. Bối cảnh &amp; Mục tiêu (Context &amp; Objectives)</span>
+    <span class="en-text">1.1. Context &amp; Objectives</span>
+  </h3>
+  <p class="vi-text">Dự án xây dựng một trợ lý ảo thông minh (Chatbot) ngành F&amp;B tư vấn cá nhân hóa (cà phê, trà, sinh tố detox, protein shake) và tiếp nhận đơn hàng tự động, đồng thời đáp ứng các tiêu chuẩn khắt khe về MLOps: thu thập thực thể, quản lý phiên bản prompt/model, quan sát latency/chi phí và kiểm thử hồi quy.</p>
+  <p class="en-text">The project delivers an intelligent F&amp;B conversational assistant that recommends personalized beverages (coffee, tea, detox juices, protein shakes) and handles orders while adhering to strict MLOps standards: entity collection, prompt/model version control, latency/cost observability, and automated regression evaluations.</p>
+
+  <h3>
+    <span class="vi-text">1.2. Mục tiêu kỹ thuật cốt lõi (Core Technical Goals)</span>
+    <span class="en-text">1.2. Core Technical Goals</span>
+  </h3>
+  <ul>
+    <li>
+      <span class="vi-text"><strong>Thu thập thực thể (Entity Collection):</strong> Bắt buộc thu thập và lưu trữ thông tin khách hàng: Số điện thoại (Phone), Tên (Name), Địa chỉ giao hàng (Address) vào PostgreSQL.</span>
+      <span class="en-text"><strong>Entity Collection:</strong> Collect and persist core customer entities: Phone Number (Regex VN), Name, and Delivery Address into PostgreSQL.</span>
+    </li>
+    <li>
+      <span class="vi-text"><strong>An toàn dị ứng tuyệt đối (Allergen Hard Guardrails):</strong> Loại trừ 100% nguy cơ ảo giác dị ứng bằng mã nguồn Python trước khi đưa vào context của LLM.</span>
+      <span class="en-text"><strong>Allergen Safety Guardrails:</strong> Eliminate 100% LLM hallucination risks regarding allergens via strict code-level filtering in Python prior to LLM context ingestion.</span>
+    </li>
+    <li>
+      <span class="vi-text"><strong>Phê duyệt 2 tầng (Human-in-the-Loop):</strong> Mọi hành vi nhạy cảm (Tạo đơn hàng, cập nhật dị ứng) đều ở mức <code>pending</code> và yêu cầu người dùng xác nhận rõ ràng.</span>
+      <span class="en-text"><strong>Two-Stage Human-in-the-Loop:</strong> Irreversible actions (Order placement, profile/allergy updates) remain <code>pending</code> until explicitly approved by the user.</span>
+    </li>
+    <li>
+      <span class="vi-text"><strong>Giám sát chi phí vi mô (Observability):</strong> Ghi vết chi tiết từng câu chat: Model, Prompt Hash, Token In/Out, Chi phí USD và Latency qua Langfuse Telemetry.</span>
+      <span class="en-text"><strong>Granular Observability:</strong> Log structured telemetry per chat turn: Model Name, Prompt Hash, Tokens In/Out, USD Cost, and Latency via Langfuse Telemetry.</span>
+    </li>
+    <li>
+      <span class="vi-text"><strong>Prompt Versioning &amp; Hot-swap:</strong> Lưu trữ Prompt trong Database với mã băm SHA256; hỗ trợ kích hoạt và Rollback tức thì mà không cần restart server hay deploy lại code.</span>
+      <span class="en-text"><strong>Dynamic Prompt Versioning:</strong> Database-backed Prompt Registry with SHA256 drift detection; instant runtime hot-swap/rollback without server restarts.</span>
+    </li>
+  </ul>
+
+  <h3>
+    <span class="vi-text">1.3. Ngoài phạm vi hiện tại (Non-Goals / Gaps)</span>
+    <span class="en-text">1.3. Non-Goals / Current Gaps</span>
+  </h3>
+  <ul>
+    <li>
+      <span class="vi-text"><strong>AWS Bedrock qua VPC Endpoint:</strong> Hiện tại hệ thống kết nối trực tiếp OpenAI / Gemini API và mô hình cục bộ Ollama; tầng Private VPC Endpoint dành cho phase tiếp theo.</span>
+      <span class="en-text"><strong>AWS Bedrock via VPC Endpoint:</strong> Direct connection to OpenAI / Gemini API and local Ollama is active; AWS Bedrock VPC Endpoint is scheduled for the next phase.</span>
+    </li>
+    <li>
+      <span class="vi-text"><strong>Cổng thanh toán trực tuyến:</strong> Đơn hàng lưu trạng thái <code>placed</code> vào cơ sở dữ liệu, chưa tích hợp cổng thanh toán trực tiếp (Stripe/VNPay).</span>
+      <span class="en-text"><strong>Payment Gateway:</strong> Orders transition to <code>placed</code> status in the database without direct payment gateway integration.</span>
+    </li>
+  </ul>
+
+  <!-- SECTION 2 -->
+  <h2>
+    <span class="vi-text">2. KIẾN TRÚC HỆ THỐNG &amp; LUỒNG DỮ LIỆU</span>
+    <span class="en-text">2. SYSTEM ARCHITECTURE &amp; DATA FLOW</span>
+  </h2>
+
+  <h3>
+    <span class="vi-text">2.1. Sơ đồ Kiến trúc Tổng thể (High-Level Architecture)</span>
+    <span class="en-text">2.1. High-Level Architecture Diagram</span>
+  </h3>
+  <pre><code>[Client / Web UI] ──(HTTP :80 / :3000)──► [Nginx Gateway]
+                                                │
+                      ┌─────────────────────────┴──────────────────────┐
+                      ▼                                                ▼
+            [FastAPI Backend :8000]                           [React Frontend SPA]
+                      │
+        ┌─────────────┼─────────────────────────┐
+        ▼             ▼                         ▼
+ [PostgreSQL 16] [Langfuse / Telemetry]  [LLM Inference Engine]
+ - Users &amp; Prefs - Traces, Token, Cost   - OpenAI / Gemini 3.8
+ - Menu &amp; Orders - Centralized Evals     - Ollama Local (gemma)
+ - PromptVersion - Model Registry        - Heuristic Fallback
+</code></pre>
+
+  <h3>
+    <span class="vi-text">2.2. Vòng lặp ReAct Agent (Loop &amp; Tools)</span>
+    <span class="en-text">2.2. ReAct Agent Loop &amp; Tool Contracts</span>
+  </h3>
+  <p class="vi-text">Agent được cấu hình theo vòng lặp hữu hạn (tối đa 4 iterations) liên kết 3 công cụ cốt lõi:</p>
+  <p class="en-text">The agent runs a bounded tool-calling loop (maximum 4 iterations) bound to 3 primary tools:</p>
+  <ul>
+    <li>
+      <span class="vi-text"><code>recommend_drink</code>: Tra cứu menu đồ uống đã được lọc sạch chất dị ứng của người dùng.</span>
+      <span class="en-text"><code>recommend_drink</code>: Queries menu items that have been strictly filtered against customer declared allergens.</span>
+    </li>
+    <li>
+      <span class="vi-text"><code>update_profile</code>: Ghi nhận sở thích/dị ứng mới &rarr; tạo <code>PendingPreferenceChange</code>.</span>
+      <span class="en-text"><code>update_profile</code>: Stages preference/allergy modifications into <code>PendingPreferenceChange</code>.</span>
+    </li>
+    <li>
+      <span class="vi-text"><code>order</code>: Kiểm tra an toàn dị ứng lần 2 &rarr; tạo đơn hàng ở trạng thái <code>pending</code>.</span>
+      <span class="en-text"><code>order</code>: Executes secondary allergen check &rarr; creates an <code>Order</code> in <code>pending</code> status.</span>
+    </li>
+  </ul>
+
+  <!-- SECTION 3 -->
+  <h2>
+    <span class="vi-text">3. MÔ HÌNH DỮ LIỆU &amp; CƠ SỞ DỮ LIỆU</span>
+    <span class="en-text">3. DATABASE SCHEMA &amp; DOMAIN MODELS</span>
+  </h2>
+  <p class="vi-text">Hệ thống sử dụng PostgreSQL 16 quản lý qua SQLAlchemy 2.0 Async (driver <code>asyncpg</code>) và Alembic migration:</p>
+  <p class="en-text">PostgreSQL 16 is managed using SQLAlchemy 2.0 Async (with <code>asyncpg</code> driver) and Alembic migrations:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">
+          <span class="vi-text">Bảng (Table)</span><span class="en-text">Table Name</span>
+        </th>
+        <th style="width: 38%;">
+          <span class="vi-text">Các cột cốt lõi (Key Columns)</span><span class="en-text">Core Schema Attributes</span>
+        </th>
+        <th>
+          <span class="vi-text">Nghiệp vụ MLOps &amp; F&amp;B</span><span class="en-text">Domain Description</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>users</code></td>
+        <td><code>id, phone (UNIQUE), name, address, created_at</code></td>
+        <td>
+          <span class="vi-text">Lưu trữ thực thể khách hàng (SĐT, Tên, Địa chỉ). Regex kiểm tra đầu số VN.</span>
+          <span class="en-text">Customer core entities (Phone, Name, Address). Validated via VN phone regex.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>user_preferences</code></td>
+        <td><code>user_id, tastes, drink_types, temperature, caffeine, allergies, dietary_restrictions</code></td>
+        <td>
+          <span class="vi-text">Hồ sơ khẩu vị cá nhân hóa và danh sách dị ứng của người dùng.</span>
+          <span class="en-text">Personalized taste profiles and customer declared allergy arrays.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>menu_items</code></td>
+        <td><code>id, name, description, ingredients (ARRAY), price, category, allergens (ARRAY)</code></td>
+        <td>
+          <span class="vi-text">Danh mục 15+ món (Cafe, Tea, Fruit Juice, Protein) kèm dị nguyên.</span>
+          <span class="en-text">15+ sample menu items with explicit ingredient and allergen arrays.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>chat_messages</code></td>
+        <td><code>id, user_id, role, content, model_name, input_tokens, output_tokens, estimated_cost_usd, latency_ms</code></td>
+        <td>
+          <span class="vi-text">Lưu lịch sử chat kèm metadata MLOps đo lường token, chi phí, độ trễ.</span>
+          <span class="en-text">Full conversation log with embedded MLOps telemetry (tokens, cost, latency).</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>prompt_versions</code></td>
+        <td><code>id, name, version, template, prompt_hash, is_active, created_at</code></td>
+        <td>
+          <span class="vi-text">Quản lý lịch sử prompt, trạng thái active và mã băm SHA256 chống drift.</span>
+          <span class="en-text">Prompt version registry with SHA256 hash tracking and active runtime flags.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>orders</code> &amp; <code>order_items</code></td>
+        <td><code>id, user_id, status (pending/placed), total_price, items</code></td>
+        <td>
+          <span class="vi-text">Quản lý đơn hàng với cơ chế chờ duyệt (pending) trước khi đặt chính thức.</span>
+          <span class="en-text">Order persistence with two-stage approval gate (pending &rarr; placed).</span>
+        </td>
+      </tr>
+      <tr>
+        <td><code>pending_preference_changes</code></td>
+        <td><code>id, user_id, staged_changes, is_confirmed</code></td>
+        <td>
+          <span class="vi-text">Hàng đợi lưu tạm thay đổi thông tin dị ứng/sở thích chờ xác nhận.</span>
+          <span class="en-text">Staged profile preference queue awaiting customer confirmation.</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 4 -->
+  <h2>
+    <span class="vi-text">4. THIẾT KẾ API CỐT LÕI (CORE API SPECIFICATIONS)</span>
+    <span class="en-text">4. CORE API SPECIFICATIONS</span>
+  </h2>
+
+  <h3>
+    <span class="vi-text">4.1. Nhóm Endpoints Nghiệp Vụ Chat &amp; Ordering</span>
+    <span class="en-text">4.1. Chat &amp; Order Endpoints</span>
+  </h3>
+  <ul>
+    <li><code>POST /api/auth/register</code>:
+      <span class="vi-text">Đăng ký người dùng mới (phone, name, address) &rarr; trả về JWT token.</span>
+      <span class="en-text">User registration (phone, name, address) &rarr; returns JWT session token.</span>
+    </li>
+    <li><code>POST /api/chat</code>:
+      <span class="vi-text">Gửi tin nhắn người dùng đến Agent &rarr; trả về tin nhắn trợ lý kèm metadata và pending state.</span>
+      <span class="en-text">Send message to Agent &rarr; returns assistant reply, tool executions, and pending order preview.</span>
+    </li>
+    <li><code>POST /api/chat/confirm-order</code>:
+      <span class="vi-text">Xác nhận đơn hàng pending chuyển thành <code>placed</code>.</span>
+      <span class="en-text">Confirms a pending order and marks it as <code>placed</code>.</span>
+    </li>
+  </ul>
+
+  <h3>
+    <span class="vi-text">4.2. Nhóm Endpoints MLOps Telemetry &amp; Prompt Management</span>
+    <span class="en-text">4.2. MLOps Telemetry &amp; Prompt Registry Endpoints</span>
+  </h3>
+  <ul>
+    <li><code>GET /api/telemetry/traces</code>:
+      <span class="vi-text">Lấy 20 traces gần nhất kèm token, latency, chi phí cho Frontend Inspector.</span>
+      <span class="en-text">Retrieves recent execution traces with token consumption, cost, and latency for Frontend Inspector.</span>
+    </li>
+    <li><code>GET /api/telemetry/prompts</code>:
+      <span class="vi-text">Lấy danh sách toàn bộ phiên bản prompt và hash SHA256.</span>
+      <span class="en-text">Fetches all registered prompt versions and active SHA256 hashes.</span>
+    </li>
+    <li><code>POST /api/telemetry/prompts/activate</code>:
+      <span class="vi-text">Hot-swap kích hoạt phiên bản prompt tức thời tại runtime.</span>
+      <span class="en-text">Hot-swaps active prompt version at runtime without server restart:</span>
+      <pre><code>// Request Body
+{ "version": "2.0.0-cuc-mich" }
+
+// Response Body
+{ "status": "activated", "active_version": "2.0.0-cuc-mich", "prompt": { ... } }</code></pre>
+    </li>
+    <li><code>POST /api/telemetry/evals/run</code>:
+      <span class="vi-text">Thực thi automated benchmark suite trên dataset chuẩn hóa.</span>
+      <span class="en-text">Executes automated benchmark evaluation against standardized dataset.</span>
+    </li>
+  </ul>
+
+  <!-- SECTION 5: NFR -->
+  <h2>
+    <span class="vi-text">5. YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS - NFR)</span>
+    <span class="en-text">5. NON-FUNCTIONAL REQUIREMENTS (NFR)</span>
+  </h2>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">
+          <span class="vi-text">Phân nhóm</span><span class="en-text">Category</span>
+        </th>
+        <th style="width: 38%;">
+          <span class="vi-text">Chỉ tiêu định lượng (Target Metric)</span><span class="en-text">Target Metric</span>
+        </th>
+        <th>
+          <span class="vi-text">Giải pháp kiến trúc (Implementation)</span><span class="en-text">Architectural Implementation</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Performance<br><span class="vi-text">(Hiệu năng)</span></strong></td>
+        <td>
+          • Turn latency: <code>&le; 2.5s</code> (P95).<br>
+          • DB query latency: <code>&le; 100ms</code>.
+        </td>
+        <td>
+          <span class="vi-text">Kiến trúc Asyncpg không block event loop; Tối ưu context window &lt; 800 tokens; Đo lường realtime qua Langfuse.</span>
+          <span class="en-text">Non-blocking asyncpg connection pool; compact system prompt &lt; 800 tokens; real-time tracing via Langfuse.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Safety &amp; Accuracy<br><span class="vi-text">(An toàn &amp; Độ chính xác)</span></strong></td>
+        <td>
+          • <strong>0% vi phạm dị ứng</strong> (Allergen Violation Rate = 0).<br>
+          • 100% Pass bộ Evals Allergen Safety Benchmark.
+        </td>
+        <td>
+          <span class="vi-text">Lọc dị nguyên bằng Python code cứng trước khi gọi LLM; Kiểm thử tự động hồi quy với 73 tests Pytest.</span>
+          <span class="en-text">Hardcoded Python allergen keyword expansion prior to LLM call; Automated regression suite with 73 Pytest cases.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Availability<br><span class="vi-text">(Độ sẵn sàng)</span></strong></td>
+        <td>
+          • System Uptime: <code>99.5%</code>.<br>
+          • 0 Downtime khi OpenAI API sập mạng.
+        </td>
+        <td>
+          <span class="vi-text">Timeout 5s khi gọi LLM; Tự động fallback sang thuật toán Heuristic Recommender hoặc mô hình local Ollama.</span>
+          <span class="en-text">5s LLM timeout; graceful fallback to local heuristic preference recommender or local Ollama instance.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Cost Governance<br><span class="vi-text">(Quản lý chi phí)</span></strong></td>
+        <td>
+          • Chi phí phiên chat: <code>&le; $0.003</code>.<br>
+          • 0 vòng lặp vô tận (Zero Infinite Loops).
+        </td>
+        <td>
+          <span class="vi-text">Khống chế vòng lặp Tool Calling tối đa 4 lượt; Lưu vết token và chi phí USD tức thời vào từng tin nhắn.</span>
+          <span class="en-text">Strict loop bound (max 4 tool iterations); real-time token/cost accounting logged per message record.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Security<br><span class="vi-text">(Bảo mật)</span></strong></td>
+        <td>
+          • Bảo vệ endpoints quản trị Prompt/Menu.<br>
+          • Xác thực phiên khách hàng qua JWT.
+        </td>
+        <td>
+          <span class="vi-text">Phiên làm việc JWT; Endpoint <code>/prompts</code> yêu cầu <code>ADMIN_API_KEY</code> qua header <code>X-Admin-Key</code>; Validate regex SĐT Việt Nam.</span>
+          <span class="en-text">JWT session auth; prompt administration routes secured with <code>X-Admin-Key</code>; VN phone regex validation.</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 6: ADR -->
+  <h2>
+    <span class="vi-text">6. BẢN GHI QUYẾT ĐỊNH KIẾN TRÚC (ARCHITECTURE DECISION RECORDS - ADR)</span>
+    <span class="en-text">6. ARCHITECTURE DECISION RECORDS (ADR)</span>
+  </h2>
+
+  <!-- ADR 1 -->
+  <div class="box-adr">
+    <h3>
+      <span class="vi-text">ADR-01: Lọc dị ứng bằng mã nguồn Python thay vì giao phó cho Prompt LLM</span>
+      <span class="en-text">ADR-01: Hardcode Allergen Filtering in Python vs. Prompt-based LLM Enforcement</span>
+    </h3>
+    <p><strong>Status:</strong> <span class="badge badge-done">Accepted &amp; Implemented</span></p>
+    <p class="vi-text"><strong>Bối cảnh (Context):</strong> Khách hàng có thể bị sốc phản vệ hoặc tử vong nếu dùng phải đồ uống chứa chất dị ứng. LLM dù thông minh vẫn có xác suất hallucination hoặc bị prompt injection.</p>
+    <p class="en-text"><strong>Context:</strong> Allergen exposure can cause severe allergic reactions or anaphylactic shock. Prompt instructions to LLMs cannot guarantee zero hallucinations or complete safety against adversarial injection.</p>
+    
+    <p class="vi-text"><strong>Quyết định (Decision):</strong> Xây dựng logic lọc dị ứng hoàn toàn bằng Python (<code>backend/app/services/recommendation.py</code>). Hệ thống tự động mở rộng dị nguyên (ví dụ: "dairy" &rarr; milk, butter, cheese, whey) và loại bỏ triệt để các món vi phạm trong Menu trước khi gửi danh sách vào prompt LLM. Tool <code>order</code> cũng kiểm tra lại một lần nữa bằng code.</p>
+    <p class="en-text"><strong>Decision:</strong> Enforce allergen exclusion strictly in Python code (<code>backend/app/services/recommendation.py</code>). The service expands declared allergies into ingredient sets (e.g. "dairy" &rarr; milk, butter, cheese, whey) and eliminates non-compliant items before the LLM ever sees the menu. The <code>order</code> tool performs a secondary validation in code.</p>
+
+    <p class="vi-text"><strong>Hệ quả (Trade-offs):</strong> Đạt tỷ lệ an toàn tuyệt đối 100%, bảo vệ tính mạng khách hàng; đổi lại backend phải duy trì bảng từ điển dị nguyên.</p>
+    <p class="en-text"><strong>Trade-offs:</strong> Guarantees 100% allergen safety regardless of LLM output; requires maintaining an allergen-ingredient mapping in the backend.</p>
+  </div>
+
+  <!-- ADR 2 -->
+  <div class="box-adr">
+    <h3>
+      <span class="vi-text">ADR-02: Quản lý Prompt động qua Database và Cơ chế Hot-swap Runtime</span>
+      <span class="en-text">ADR-02: Database-Backed Prompt Versioning with Runtime Hot-Swap and Drift Detection</span>
+    </h3>
+    <p><strong>Status:</strong> <span class="badge badge-done">Accepted &amp; Implemented</span></p>
+    <p class="vi-text"><strong>Bối cảnh (Context):</strong> Ban đầu prompt được hardcode trong code. Mỗi lần tinh chỉnh prompt, A/B test hoặc thử nghiệm phiên bản mới (như bản <code>v2.0.0-cuc-mich</code>) phải rebuild Docker image hoặc deploy lại code, gây downtime.</p>
+    <p class="en-text"><strong>Context:</strong> Hardcoding prompt templates in source code requires full rebuilds and redeployments to test copy updates, A/B test variants, or personality experiments (e.g. <code>v2.0.0-cuc-mich</code>), causing service disruption.</p>
+
+    <p class="vi-text"><strong>Quyết định (Decision):</strong> Xây dựng bảng <code>PromptVersion</code> trong PostgreSQL kết hợp in-memory cache registry. Tạo mã băm SHA256 (12 ký tự) để nhận diện drift cấu hình. Cung cấp API <code>/api/telemetry/prompts/activate</code> cho phép Admin bấm đổi prompt hoặc rollback tức thì ngay trên UI.</p>
+    <p class="en-text"><strong>Decision:</strong> Implement a PostgreSQL <code>PromptVersion</code> entity synchronized with an in-memory registry. Generate SHA256 hashes (12 chars) to detect template drift. Expose <code>/api/telemetry/prompts/activate</code> to hot-swap or rollback active prompts dynamically without downtime.</p>
+
+    <p class="vi-text"><strong>Hệ quả (Trade-offs):</strong> Thay đổi văn phong bot trong 1 giây mà không gián đoạn dịch vụ; đổi lại phải có cơ chế đồng bộ giữa Database và cache in-memory.</p>
+    <p class="en-text"><strong>Trade-offs:</strong> Enables zero-downtime prompt rollback and instant A/B experimentation; introduces cache synchronization requirements across worker instances.</p>
+  </div>
+
+  <!-- ADR 3 -->
+  <div class="box-adr">
+    <h3>
+      <span class="vi-text">ADR-03: Cổng Phê Duyệt 2 Tầng (Two-Stage Human-in-the-Loop)</span>
+      <span class="en-text">ADR-03: Two-Stage Human Confirmation Gate for Irreversible Actions</span>
+    </h3>
+    <p><strong>Status:</strong> <span class="badge badge-done">Accepted &amp; Implemented</span></p>
+    <p class="vi-text"><strong>Bối cảnh (Context):</strong> Đặt hàng liên quan đến tài chính và giao vận. Nếu để LLM tự quyết định đặt hàng khi khách chỉ hỏi vu vơ, khách hàng sẽ bị tạo đơn nhầm lẫn.</p>
+    <p class="en-text"><strong>Context:</strong> Placing orders involves monetary transactions and logistics. Allowing an autonomous LLM to finalize orders based on conversational intent frequently results in accidental purchases.</p>
+
+    <p class="vi-text"><strong>Quyết định (Decision):</strong> Tool <code>order</code> chỉ tạo đơn ở trạng thái <code>pending</code>. UI hiển thị thẻ xác nhận và đơn hàng chỉ chuyển sang <code>placed</code> khi khách hàng chủ động bấm nút "Xác nhận đặt hàng" trên màn hình.</p>
+    <p class="en-text"><strong>Decision:</strong> The <code>order</code> tool is restricted to creating orders in a <code>pending</code> state. The UI renders a confirmation card requiring an explicit customer click before the order transitions to <code>placed</code>.</p>
+
+    <p class="vi-text"><strong>Hệ quả (Trade-offs):</strong> Loại bỏ 100% đơn hàng rác và hiểu nhầm ý định; đổi lại thêm một bước thao tác xác nhận cho người dùng.</p>
+    <p class="en-text"><strong>Trade-offs:</strong> Completely prevents unintentional transactions; adds one explicit confirmation click to the customer user experience.</p>
+  </div>
+
+  <!-- SECTION 7: RISK REGISTER -->
+  <h2>
+    <span class="vi-text">7. SỔ ĐĂNG KÝ &amp; QUẢN TRỊ RỦI RO (RISK REGISTER)</span>
+    <span class="en-text">7. RISK REGISTER &amp; MITIGATION MATRIX</span>
+  </h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 7%;">ID</th>
+        <th style="width: 28%;">
+          <span class="vi-text">Rủi ro tiềm ẩn (Risk)</span><span class="en-text">Identified Risk</span>
+        </th>
+        <th style="width: 10%;">
+          <span class="vi-text">Xác suất</span><span class="en-text">Likelihood</span>
+        </th>
+        <th style="width: 12%;">
+          <span class="vi-text">Tác động</span><span class="en-text">Impact</span>
+        </th>
+        <th>
+          <span class="vi-text">Biện pháp phòng ngừa &amp; Ứng phó (Mitigation Plan)</span>
+          <span class="en-text">Mitigation Strategy</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>R-01</strong></td>
+        <td>
+          <span class="vi-text"><strong>Ảo giác dị ứng:</strong> AI gợi ý món chứa chất dị ứng của khách.</span>
+          <span class="en-text"><strong>Allergen Hallucination:</strong> AI recommends drinks containing declared allergens.</span>
+        </td>
+        <td><span class="badge badge-med">Med</span></td>
+        <td><span class="badge badge-high">Critical</span></td>
+        <td>
+          <span class="vi-text">Lọc menu bằng mã Python trước khi LLM thấy; Kiểm thử benchmark 100% pass trước release.</span>
+          <span class="en-text">Hardcode Python filter before LLM prompt; 100% pass rate in automated allergen safety benchmarks.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>R-02</strong></td>
+        <td>
+          <span class="vi-text"><strong>Đặt nhầm đơn:</strong> Khách bị chốt đơn khi chưa đồng ý.</span>
+          <span class="en-text"><strong>Accidental Ordering:</strong> AI places an order without explicit customer consent.</span>
+        </td>
+        <td><span class="badge badge-med">Med</span></td>
+        <td><span class="badge badge-high">High</span></td>
+        <td>
+          <span class="vi-text">Áp dụng Human-in-the-loop: Đơn ở mức <code>pending</code> cho đến khi khách bấm xác nhận trên UI.</span>
+          <span class="en-text">Human-in-the-loop gate: Orders remain <code>pending</code> until confirmed via UI button.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>R-03</strong></td>
+        <td>
+          <span class="vi-text"><strong>Đội chi phí API:</strong> Tool calling lặp vô tận hoặc spam chat.</span>
+          <span class="en-text"><strong>Cost Explosion:</strong> Infinite tool loops or malicious high-volume prompt spam.</span>
+        </td>
+        <td><span class="badge badge-high">High</span></td>
+        <td><span class="badge badge-med">Medium</span></td>
+        <td>
+          <span class="vi-text">Khống chế vòng lặp Tool tối đa 4 lượt; Lưu vết token/chi phí USD tức thời qua Langfuse.</span>
+          <span class="en-text">Strict iteration bound (max 4 tool calls); log real-time token/cost tracking in Langfuse.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>R-04</strong></td>
+        <td>
+          <span class="vi-text"><strong>Sập kết nối bên thứ 3:</strong> OpenAI API timeout &gt; 5s hoặc mất mạng.</span>
+          <span class="en-text"><strong>3rd-Party Outage:</strong> OpenAI API times out (>5s) or global downtime.</span>
+        </td>
+        <td><span class="badge badge-low">Low</span></td>
+        <td><span class="badge badge-high">High</span></td>
+        <td>
+          <span class="vi-text">Timeout 5s; Tự động fallback sang thuật toán Heuristic Recommender nội bộ.</span>
+          <span class="en-text">5s timeout; graceful fallback to deterministic local heuristic preference ranking.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>R-05</strong></td>
+        <td>
+          <span class="vi-text"><strong>Prompt Drift:</strong> Sửa prompt làm suy giảm chất lượng câu trả lời.</span>
+          <span class="en-text"><strong>Prompt Drift:</strong> New prompt version causes regressions or broken behavior.</span>
+        </td>
+        <td><span class="badge badge-med">Med</span></td>
+        <td><span class="badge badge-med">Medium</span></td>
+        <td>
+          <span class="vi-text">Quản lý version với SHA256; Chạy automated benchmark trước khi Activate; Rollback 1-click.</span>
+          <span class="en-text">SHA256 hash tracking; automated Evals benchmark execution before activation; 1-click rollback.</span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>R-06</strong></td>
+        <td>
+          <span class="vi-text"><strong>Xung đột cổng Docker:</strong> Port 3000 hoặc 8000 bị ứng dụng khác chiếm dụng.</span>
+          <span class="en-text"><strong>Port Conflicts:</strong> Host ports (3000/8000) occupied by zombie processes.</span>
+        </td>
+        <td><span class="badge badge-med">Med</span></td>
+        <td><span class="badge badge-low">Low</span></td>
+        <td>
+          <span class="vi-text">Cấu hình biến môi trường <code>POSTGRES_HOST_PORT</code>, <code>GATEWAY_PORT</code>; Nginx reverse proxy ở port 80.</span>
+          <span class="en-text">Configurable <code>.env</code> ports; unified entrypoint reverse proxy via Nginx port 80.</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 8 -->
+  <h2>
+    <span class="vi-text">8. KẾT LUẬN &amp; LỘ TRÌNH TIẾP THEO</span>
+    <span class="en-text">8. CONCLUSION &amp; ROADMAP</span>
+  </h2>
+  <p class="vi-text">Hệ thống DrinkBot MLOps đã hiện thực hóa trọn vẹn yêu cầu nghiệp vụ F&amp;B và tiêu chuẩn MLOps: thu thập thực thể, an toàn dị ứng bằng code, giám sát chi phí vi mô và quản lý prompt động không downtime.</p>
+  <p class="en-text">The DrinkBot MLOps Platform successfully fulfills all business and MLOps requirements: reliable customer entity ingestion, code-level allergen safety, micro-level cost governance, and zero-downtime dynamic prompt versioning.</p>
+
+  <h4 class="vi-text">Kế hoạch giai đoạn tiếp theo (Next Phase Roadmap):</h4>
+  <h4 class="en-text">Next Phase Roadmap:</h4>
+  <ol>
+    <li>
+      <span class="vi-text">Triển khai AWS Bedrock thông qua VPC Private Endpoint theo đúng kiến trúc bảo mật đám mây.</span>
+      <span class="en-text">Deploy AWS Bedrock via AWS VPC PrivateLink Endpoint according to cloud enterprise security standards.</span>
+    </li>
+    <li>
+      <span class="vi-text">Mở rộng bộ dữ liệu đánh giá Evals từ 10 cases lên 100+ cases thực tế trích xuất từ production traces.</span>
+      <span class="en-text">Scale the Centralized Evals Dataset from 10 to 100+ curated cases curated from production traces.</span>
+    </li>
+    <li>
+      <span class="vi-text">Tích hợp quy trình Fine-Tuning mô hình nhỏ (Gemma 2 2B LoRA) hoàn chỉnh trên cụm GPU cluster.</span>
+      <span class="en-text">Automate Small Language Model (Gemma 2 2B LoRA) fine-tuning pipeline on GPU infrastructure.</span>
+    </li>
+  </ol>
+
+  <script>
+    function setLang(mode) {
+      document.body.classList.remove('show-both', 'mode-vi', 'mode-en');
+      const buttons = document.querySelectorAll('.lang-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+
+      if (mode === 'both') {
+        document.body.classList.add('show-both');
+        buttons[0].classList.add('active');
+      } else if (mode === 'vi') {
+        document.body.classList.add('mode-vi');
+        buttons[1].classList.add('active');
+      } else if (mode === 'en') {
+        document.body.classList.add('mode-en');
+        buttons[2].classList.add('active');
+      }
+    }
+  </script>
+
+</body>
+</html>

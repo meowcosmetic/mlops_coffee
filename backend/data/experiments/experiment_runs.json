@@ -1,5 +1,293 @@
 [
   {
+    "run_id": "run-rag-20260924-002556",
+    "experiment_name": "drinkbot-rag-contrastive-adaptation",
+    "pipeline_type": "rag_embedding_adapter",
+    "model_name": "drinkbot-embed-adapted-v1.0",
+    "base_model": "sentence-transformers/all-MiniLM-L6-v2 + Linear Adapter",
+    "hyperparameters": {
+      "dim": 384,
+      "adapter_type": "Linear + LayerNorm + Residual",
+      "epochs": 2,
+      "learning_rate": 0.001,
+      "loss_function": "ContrastiveCosineLoss"
+    },
+    "dataset_lineage": {
+      "dataset_name": "drinkbot-fnb-slang-dataset",
+      "version": "v1.0.0",
+      "sample_count": 32,
+      "sha256_hash": "883bbdda9f09"
+    },
+    "loss_history": [
+      {
+        "epoch": 1,
+        "step": 1,
+        "loss": 0.842
+      },
+      {
+        "epoch": 2,
+        "step": 2,
+        "loss": 0.115
+      }
+    ],
+    "initial_loss": 0.842,
+    "final_loss": 0.115,
+    "eval_metrics": {
+      "overall_pass_rate": 100.0,
+      "accuracy_improvement": 28.5
+    },
+    "hardware": {
+      "device_type": "CPU",
+      "device_name": "Host Processor (Torch Projection)",
+      "vram_total_gb": 0.0
+    },
+    "duration_seconds": 0.01,
+    "status": "completed",
+    "artifact_uri": "C:\\Users\\Admin\\AppData\\Local\\Temp\\pytest-of-Admin\\pytest-80\\test_embedding_retrain_pipelin0\\test_adapted_embed.pt",
+    "sha256_hash": "340b48f66813",
+    "notes": "Retrained on 32 pairs from drinkbot-fnb-slang-dataset@v1.0.0.",
+    "created_at": "2026-09-24T00:25:56.682397+00:00"
+  },
+  {
+    "run_id": "run-slm-20260924-002556",
+    "experiment_name": "drinkbot-slm-gemma2b-lora",
+    "pipeline_type": "slm_lora_finetune",
+    "model_name": "drinkbot-slm-lora-v1.0",
+    "base_model": "google/gemma-2-2b-it",
+    "hyperparameters": {
+      "r": 8,
+      "lora_alpha": 16,
+      "target_modules": [
+        "q_proj",
+        "v_proj"
+      ],
+      "epochs": 2,
+      "batch_size": 2,
+      "learning_rate": 0.0002,
+      "optimizer": "AdamW"
+    },
+    "dataset_lineage": {
+      "dataset_name": "drinkbot-slm-finetune-dataset",
+      "version": "v1.0.0",
+      "sample_count": 10,
+      "sha256_hash": "1bc4d1c4e533"
+    },
+    "loss_history": [
+      {
+        "epoch": 1.0,
+        "step": 1,
+        "loss": 2.42
+      },
+      {
+        "epoch": 1.2,
+        "step": 2,
+        "loss": 2.232
+      },
+      {
+        "epoch": 1.4,
+        "step": 3,
+        "loss": 2.044
+      },
+      {
+        "epoch": 1.6,
+        "step": 4,
+        "loss": 1.858
+      },
+      {
+        "epoch": 1.8,
+        "step": 5,
+        "loss": 1.668
+      },
+      {
+        "epoch": 2.0,
+        "step": 6,
+        "loss": 1.48
+      },
+      {
+        "epoch": 2.2,
+        "step": 7,
+        "loss": 1.342
+      },
+      {
+        "epoch": 2.4,
+        "step": 8,
+        "loss": 1.204
+      },
+      {
+        "epoch": 2.6,
+        "step": 9,
+        "loss": 1.068
+      },
+      {
+        "epoch": 2.8,
+        "step": 10,
+        "loss": 0.928
+      }
+    ],
+    "initial_loss": 2.42,
+    "final_loss": 0.928,
+    "eval_metrics": {
+      "overall_pass_rate": 96.2,
+      "allergen_safety": 100.0,
+      "menu_groundedness": 92.5
+    },
+    "hardware": {
+      "device_type": "GPU",
+      "device_name": "NVIDIA GeForce RTX 3060",
+      "vram_total_gb": 12.0
+    },
+    "duration_seconds": 0.1,
+    "status": "completed",
+    "artifact_uri": "C:\\Users\\Admin\\AppData\\Local\\Temp\\pytest-of-Admin\\pytest-80\\test_slm_finetune_pipeline_exe0\\gemma_lora_test",
+    "sha256_hash": "9b28fb646171",
+    "notes": "LoRA Fine-Tune run with 10 samples from drinkbot-slm-finetune-dataset@v1.0.0.",
+    "created_at": "2026-09-24T00:25:56.661986+00:00"
+  },
+  {
+    "run_id": "run-rag-20260924-002556",
+    "experiment_name": "drinkbot-rag-contrastive-adaptation",
+    "pipeline_type": "rag_embedding_adapter",
+    "model_name": "drinkbot-embed-adapted-v1.0",
+    "base_model": "sentence-transformers/all-MiniLM-L6-v2 + Linear Adapter",
+    "hyperparameters": {
+      "dim": 384,
+      "adapter_type": "Linear + LayerNorm + Residual",
+      "epochs": 2,
+      "learning_rate": 0.001,
+      "loss_function": "ContrastiveCosineLoss"
+    },
+    "dataset_lineage": {
+      "dataset_name": "drinkbot-fnb-slang-dataset",
+      "version": "v1.0.0",
+      "sample_count": 32,
+      "sha256_hash": "883bbdda9f09"
+    },
+    "loss_history": [
+      {
+        "epoch": 1,
+        "step": 1,
+        "loss": 0.842
+      },
+      {
+        "epoch": 2,
+        "step": 2,
+        "loss": 0.115
+      }
+    ],
+    "initial_loss": 0.842,
+    "final_loss": 0.115,
+    "eval_metrics": {
+      "overall_pass_rate": 100.0,
+      "accuracy_improvement": 28.5
+    },
+    "hardware": {
+      "device_type": "CPU",
+      "device_name": "Host Processor (Torch Projection)",
+      "vram_total_gb": 0.0
+    },
+    "duration_seconds": 0.09,
+    "status": "completed",
+    "artifact_uri": "C:\\Users\\Admin\\AppData\\Local\\Temp\\pytest-of-Admin\\pytest-80\\test_embedding_retrain_pipelin0\\test_adapted_embed.pt",
+    "sha256_hash": "340b48f66813",
+    "notes": "Retrained on 32 pairs from drinkbot-fnb-slang-dataset@v1.0.0.",
+    "created_at": "2026-09-24T00:25:56.502177+00:00"
+  },
+  {
+    "run_id": "run-slm-20260924-002556",
+    "experiment_name": "drinkbot-slm-gemma2b-lora",
+    "pipeline_type": "slm_lora_finetune",
+    "model_name": "drinkbot-slm-lora-v1.0",
+    "base_model": "google/gemma-2-2b-it",
+    "hyperparameters": {
+      "r": 8,
+      "lora_alpha": 16,
+      "target_modules": [
+        "q_proj",
+        "v_proj"
+      ],
+      "epochs": 2,
+      "batch_size": 2,
+      "learning_rate": 0.0002,
+      "optimizer": "AdamW"
+    },
+    "dataset_lineage": {
+      "dataset_name": "drinkbot-slm-finetune-dataset",
+      "version": "v1.0.0",
+      "sample_count": 10,
+      "sha256_hash": "1bc4d1c4e533"
+    },
+    "loss_history": [
+      {
+        "epoch": 1.0,
+        "step": 1,
+        "loss": 2.42
+      },
+      {
+        "epoch": 1.2,
+        "step": 2,
+        "loss": 2.232
+      },
+      {
+        "epoch": 1.4,
+        "step": 3,
+        "loss": 2.044
+      },
+      {
+        "epoch": 1.6,
+        "step": 4,
+        "loss": 1.858
+      },
+      {
+        "epoch": 1.8,
+        "step": 5,
+        "loss": 1.668
+      },
+      {
+        "epoch": 2.0,
+        "step": 6,
+        "loss": 1.48
+      },
+      {
+        "epoch": 2.2,
+        "step": 7,
+        "loss": 1.342
+      },
+      {
+        "epoch": 2.4,
+        "step": 8,
+        "loss": 1.204
+      },
+      {
+        "epoch": 2.6,
+        "step": 9,
+        "loss": 1.068
+      },
+      {
+        "epoch": 2.8,
+        "step": 10,
+        "loss": 0.928
+      }
+    ],
+    "initial_loss": 2.42,
+    "final_loss": 0.928,
+    "eval_metrics": {
+      "overall_pass_rate": 96.2,
+      "allergen_safety": 100.0,
+      "menu_groundedness": 92.5
+    },
+    "hardware": {
+      "device_type": "GPU",
+      "device_name": "NVIDIA GeForce RTX 3060",
+      "vram_total_gb": 12.0
+    },
+    "duration_seconds": 0.1,
+    "status": "completed",
+    "artifact_uri": "C:\\Users\\Admin\\AppData\\Local\\Temp\\pytest-of-Admin\\pytest-80\\test_slm_finetune_pipeline_exe0\\gemma_lora_test",
+    "sha256_hash": "9b28fb646171",
+    "notes": "LoRA Fine-Tune run with 10 samples from drinkbot-slm-finetune-dataset@v1.0.0.",
+    "created_at": "2026-09-24T00:25:56.397228+00:00"
+  },
+  {
     "run_id": "run-rag-20260916-075706",
     "experiment_name": "drinkbot-rag-contrastive-adaptation",
     "pipeline_type": "rag_embedding_adapter",

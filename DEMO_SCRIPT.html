@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kịch Bản Demo - DrinkBot MLOps</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      color: #222;
+      background: #fafafa;
+      max-width: 860px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      border-bottom: 2px solid #333;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: 1.25rem;
+      color: #111;
+      margin-top: 24px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 4px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 14px 0 6px;
+      color: #2c5282;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+    .badge-time {
+      background: #feebc8;
+      color: #744210;
+    }
+    ul, ol {
+      margin: 6px 0 12px 20px;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    .prompt-box {
+      background: #edf2f7;
+      border-left: 4px solid #3182ce;
+      padding: 8px 12px;
+      font-family: Consolas, monospace;
+      font-size: 0.92rem;
+      margin: 6px 0 10px;
+      white-space: pre-wrap;
+    }
+    .speech-box {
+      background: #f7fafc;
+      border: 1px dashed #cbd5e0;
+      padding: 8px 12px;
+      margin: 6px 0 10px;
+      font-size: 0.95rem;
+      color: #2d3748;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #cbd5e0;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background: #edf2f7;
+    }
+    .note {
+      font-weight: 600;
+      color: #c53030;
+    }
+    @media print {
+      body { background: #fff; max-width: 100%; margin: 0; }
+      .prompt-box, .speech-box { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>KỊCH BẢN DEMO: DRINKBOT MLOPS (7 - 10 PHÚT)</h1>
+  <p><em>Kịch bản tóm gọn phục vụ trình diễn thực chiến, tập trung 2 phần: Nghiệp vụ F&amp;B + Nền tảng MLOps.</em></p>
+
+  <h2>1. CHUẨN BỊ TRƯỚC DEMO (2 PHÚT)</h2>
+  <ul>
+    <li><strong>Khởi động hệ thống:</strong> Đảm bảo Backend (port <code>8000</code>) và Frontend (port <code>5173</code> hoặc <code>3000</code>) đang chạy.</li>
+    <li><strong>Kiểm tra Menu &amp; Prompt:</strong> Đã chạy seed (<code>python -m app.seed</code>).</li>
+    <li><strong>Chuẩn bị 2 tab trình duyệt:</strong>
+      <ul>
+        <li>Tab 1: Giao diện Khách hàng chat (<code>http://localhost:5173</code>).</li>
+        <li>Tab 2: Mở bảng MLOps Inspector (Sidebar bên phải hoặc trang Telemetry).</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>2. TIẾN TRÌNH DEMO TRỰC TIẾP (5 BƯỚC)</h2>
+
+  <h3>Bước 1: Trải Nghiệm Khách Hàng &amp; Guardrail Dị Ứng <span class="badge badge-time">2.5 phút</span></h3>
+  <ul>
+    <li><strong>Đăng nhập:</strong> Nhập SĐT <code>0912345678</code> &rarr; Đăng nhập ngay (phiên JWT, không OTP rườm rà).</li>
+    <li><strong>Chat thử thách dị ứng:</strong> Copy câu sau vào khung chat:</li>
+  </ul>
+  <div class="prompt-box">Tôi vừa đi tập gym về, muốn tìm đồ uống nhiều protein nhưng tôi bị dị ứng sữa bò (dairy), hãy gợi ý cho tôi món phù hợp.</div>
+  <ul>
+    <li><strong>Điểm cần chỉ:</strong>
+      <ul>
+        <li>Menu có 3 món protein: Chocolate Shake (có sữa), Peanut Butter (có sữa), <strong>Vanilla Protein Smoothie</strong> (dùng pea protein + oat milk).</li>
+        <li>Bot <strong>chỉ</strong> gợi ý món Vanilla, loại trừ tuyệt đối 2 món kia nhờ bộ lọc code Python (Hard Guardrail).</li>
+      </ul>
+    </li>
+    <li><strong>Lời thoại gợi ý:</strong>
+      <div class="speech-box">"Hệ thống không phó mặc việc an toàn cho LLM. Hàm Python lọc dị nguyên trước khi LLM thấy menu nên không bao giờ xảy ra hallucination về dị ứng."</div>
+    </li>
+    <li><strong>Human-in-the-loop:</strong> Gõ: <code>Đặt cho tôi 1 ly Vanilla Protein Smoothie</code> &rarr; Đơn hàng tạo ở trạng thái <strong>Pending</strong>, bấm <strong>Xác nhận</strong> mới chuyển thành <strong>Placed</strong>.</li>
+  </ul>
+
+  <h3>Bước 2: MLOps Telemetry &amp; Tracing Thời Gian Thực <span class="badge badge-time">1.5 phút</span></h3>
+  <ul>
+    <li><strong>Thao tác:</strong> Mở Sidebar MLOps &rarr; Chọn tab <strong>Traces</strong> &rarr; Bấm vào Trace trên cùng vừa sinh ra.</li>
+    <li><strong>Điểm cần chỉ:</strong>
+      <ul>
+        <li><strong>Latency:</strong> Thời gian phản hồi từng turn.</li>
+        <li><strong>Tokens &amp; Cost:</strong> Số token input/output và chi phí USD chi tiết.</li>
+        <li><strong>Tool Calls:</strong> Hiển thị rõ LLM đã gọi tool <code>recommend_drink</code> và <code>order</code> với tham số gì.</li>
+      </ul>
+    </li>
+    <li><strong>Lời thoại gợi ý:</strong>
+      <div class="speech-box">"Mọi cuộc hội thoại đều được log dưới dạng Structured Trace chuẩn Langfuse, giúp kiểm soát hoàn toàn độ trễ và chi phí token."</div>
+    </li>
+  </ul>
+
+  <h3>Bước 3: Prompt Versioning &amp; Hot-Swap Không Downtime <span class="badge badge-time">1.5 phút</span></h3>
+  <ul>
+    <li><strong>Thao tác:</strong> Chuyển sang tab <strong>Prompts</strong> trong MLOps Inspector.</li>
+    <li><strong>Điểm cần chỉ:</strong> Danh sách versions kèm mã băm <strong>SHA256</strong> để phát hiện drift:
+      <ul>
+        <li><code>v1.2.0 (production)</code>: Phong cách lịch sự, nhã nhặn.</li>
+        <li><code>v2.0.0-cuc-mich (staging)</code>: Phiên bản "Chủ quán nước vỉa hè gắt gỏng, cộc lốc".</li>
+      </ul>
+    </li>
+    <li><strong>Thực hiện Live Hot-Swap:</strong> Bấm <strong>Activate</strong> tại <code>v2.0.0-cuc-mich</code>.</li>
+    <li><strong>Chat kiểm chứng ngay (Không reload backend):</strong>
+      <div class="prompt-box">Quán có món gì ngon không bạn ơi?</div>
+      <em>&rarr; Bot phản hồi khác biệt 180°:</em> Cộc lốc, giục giã ("Uống gì nói lẹ quán đang đông!"), nhưng vẫn chuẩn an toàn và gọi đúng tool đặt hàng.
+    </li>
+    <li><strong>Lời thoại gợi ý:</strong>
+      <div class="speech-box">"Prompt được quản lý động và hot-swap tức thì tại runtime. Chỉ với 1 cú click kích hoạt v2.0.0-cuc-mich, tính cách bot thay đổi 180 độ ngay lập tức mà không cần rebuild container hay restart server."</div>
+    </li>
+    <li><strong>Rollback:</strong> Bấm <strong>Activate</strong> lại <code>v1.2.0</code> để đưa bot về phong cách chuẩn.</li>
+  </ul>
+
+  <h3>Bước 4: Centralized Evals &amp; Chạy Benchmark <span class="badge badge-time">1.5 phút</span></h3>
+  <ul>
+    <li><strong>Thao tác:</strong> Chuyển sang tab <strong>Evals</strong> &rarr; Xem danh sách test dataset (Allergen, NER, Recommend).</li>
+    <li><strong>Thực hiện:</strong> Bấm nút <strong>Run Benchmark</strong> &rarr; Đợi 2-3s ra bảng kết quả.</li>
+    <li><strong>Điểm cần chỉ:</strong> Pass Rate, độ chính xác an toàn dị ứng, thời gian chạy.</li>
+    <li><strong>Lời thoại gợi ý:</strong>
+      <div class="speech-box">"Trước khi release prompt hay model mới, hệ thống tự động chạy bộ test suite chuẩn hóa để đảm bảo không bị suy giảm chất lượng (regression)."</div>
+    </li>
+  </ul>
+
+  <h3>Bước 5: Model Registry &amp; LoRA Retraining Pipeline <span class="badge badge-time">1.5 phút</span></h3>
+  <ul>
+    <li><strong>Thao tác:</strong> Chuyển sang tab <strong>Models</strong>.</li>
+    <li><strong>Điểm cần chỉ:</strong>
+      <ul>
+        <li><strong>Model Registry:</strong> Quản lý cả model cloud (OpenAI/Gemini) và SLM nội bộ (<code>gemma-2-2b-it-lora</code>). Bấm <strong>Hot-swap</strong> đổi model ngay tại runtime.</li>
+        <li><strong>Retraining Pipeline:</strong> Thiết lập tham số LoRA (Rank=8, Alpha=16, Epochs=3) và xem biểu đồ <strong>Loss Curve</strong> trong phần Experiment Tracking.</li>
+      </ul>
+    </li>
+    <li><strong>Lời thoại gợi ý:</strong>
+      <div class="speech-box">"Hệ thống khép kín trọn vẹn vòng đời MLOps: Curation dữ liệu hội thoại &rarr; Fine-tuning LoRA mô hình nhỏ &rarr; Đo lường &amp; Đăng ký Model Registry."</div>
+    </li>
+  </ul>
+
+  <h2>3. CÂU NÓI CHỐT KẾT THÚC DEMO (15 GIÂY)</h2>
+  <div class="speech-box">
+    <strong>Lời kết:</strong> "Tóm lại, DrinkBot giải quyết bài toán F&amp;B bằng AI với 3 trụ cột: <strong>Guardrail an toàn tuyệt đối bằng code</strong>, <strong>Phê duyệt 2 tầng Human-in-the-loop</strong>, và <strong>Hạ tầng MLOps hoàn chỉnh từ Trace, Prompt đến Model Registry</strong>. Em xin cảm ơn và sẵn sàng nhận câu hỏi từ thầy/cô và hội đồng!"
+  </div>
+
+  <h2>4. XỬ LÝ SỰ CỐ NHANH TRONG PHÒNG DEMO</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 30%;">Sự cố</th>
+        <th style="width: 35%;">Cách xử lý ngay</th>
+        <th>Cách giải thích tự tin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>LLM phản hồi chậm / lag mạng</strong></td>
+        <td>Chờ 3-4s hoặc refresh trang chat</td>
+        <td>"Hệ thống có cơ chế timeout và fallback sang rule-based recommender khi mạng ngoài quá tải."</td>
+      </tr>
+      <tr>
+        <td><strong>Giám khảo hỏi về Bedrock / VPC</strong></td>
+        <td>Thừa nhận thẳng thắn</td>
+        <td>"Hiện tại nhóm đã hoàn thiện toàn bộ tầng Agent, Guardrails và Telemetry. Tầng VPC Endpoint &amp; Bedrock nằm ở Phase tiếp theo theo đúng scorecard đã báo cáo."</td>
+      </tr>
+      <tr>
+        <td><strong>Quên kịch bản câu chat</strong></td>
+        <td>Chỉ cần nhớ câu: <em>"Tôi dị ứng sữa, có món protein nào không?"</em></td>
+        <td>Đây là câu test kinh điển chứng minh cả 2 tool: tìm kiếm món và guardrail dị ứng.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
